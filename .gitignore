@@ -1,0 +1,39 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+*.egg-info/
+dist/
+build/
+*.sqlite3
+staticfiles/
+media/
+.venv/
+venv/
+env/
+
+# Node / Frontend
+node_modules/
+dist/
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / dev-only data artifacts (do not deploy)
+*.log
+backend/import_review.csv
+backend/import_overrides.csv
+
+# Railway
+.railway/
