@@ -16,9 +16,9 @@ ALLOWED_HOSTS = config(
 _railway_host = config('RAILWAY_PUBLIC_DOMAIN', default='')
 if _railway_host:
     ALLOWED_HOSTS.append(_railway_host)
-# Allow Railway health checks / internal routing when nothing is configured yet.
-if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['*']
+# Railway's healthcheck requests use this Host header.
+if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
 
 # ─── Database ────────────────────────────────────────────────────────────────
 # Railway's Postgres plugin provides DATABASE_URL. Fall back to the individual
