@@ -16,9 +16,9 @@ ALLOWED_HOSTS = config(
 _railway_host = config('RAILWAY_PUBLIC_DOMAIN', default='')
 if _railway_host:
     ALLOWED_HOSTS.append(_railway_host)
-# Allow Railway health checks / internal routing when nothing is configured yet.
-if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['*']
+# Railway's healthcheck requests use this Host header.
+if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
 
 # ─── Database ────────────────────────────────────────────────────────────────
 # Railway's Postgres plugin provides DATABASE_URL. Fall back to the individual
@@ -71,3 +71,5 @@ SESSION_COOKIE_HTTPONLY = True
 # Redirect to HTTPS; Railway's edge terminates TLS and forwards X-Forwarded-Proto.
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Railway healthchecks use plain HTTP; don't redirect them to HTTPS.
+SECURE_REDIRECT_EXEMPT = [r'^api/health/$']
