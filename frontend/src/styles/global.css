@@ -1554,3 +1554,253 @@ input[type="date"], input[type="number"], select, textarea {
   .dstat-grid { grid-template-columns: 1fr; }
   .dash-hello { font-size: 22px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Vibrance & motion — colourful accents + lively micro-interactions.
+   Layered last so it enhances the base theme. All motion is disabled under
+   prefers-reduced-motion by the universal guard above.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --grad-primary: linear-gradient(135deg, #2b8acf 0%, #0d5aa7 100%);
+  --grad-violet:  linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  --grad-teal:    linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+  --grad-rose:    linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+  --grad-amber:   linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --grad-green:   linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+}
+
+/* Livelier multi-hue page background */
+body {
+  background:
+    radial-gradient(900px 480px at 100% -10%, #e4eefb 0%, rgba(228,238,251,0) 60%),
+    radial-gradient(760px 440px at -8% 8%, #efe9fe 0%, rgba(239,233,254,0) 55%),
+    radial-gradient(820px 520px at 50% 120%, #e6f7f4 0%, rgba(230,247,244,0) 60%),
+    var(--bg);
+}
+
+/* ── Buttons: gradient fills, hover lift + shine ── */
+.btn-primary {
+  background: linear-gradient(135deg, #1e85d8 0%, #0d5aa7 100%);
+  box-shadow: 0 2px 8px -2px rgba(13,90,167,0.5);
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -120%;
+  width: 60%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.55s ease;
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1877c6 0%, #0a4685 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -4px rgba(13,90,167,0.55);
+}
+.btn-primary:hover:not(:disabled)::after { left: 130%; }
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+.btn-danger {
+  background: var(--grad-rose);
+  color: #fff;
+  box-shadow: 0 2px 8px -2px rgba(190,18,60,0.45);
+}
+.btn-danger:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px -4px rgba(190,18,60,0.5); filter: brightness(1.03); }
+
+.btn-secondary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+.btn { transition: transform 0.15s ease, box-shadow 0.18s ease, background 0.18s ease, filter 0.18s ease; }
+
+/* ── Cards: colourful top-accent that reveals on hover + gentle lift ── */
+.card {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2b8acf, #7c3aed, #06b6d4);
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: #d2def0;
+}
+.card:hover::before { opacity: 1; animation: gradSlide 3s linear infinite; }
+
+/* ── Gradient text for titles & big numbers ── */
+.page-title, .dash-hello {
+  background: linear-gradient(120deg, #0d5aa7, #4f46e5 60%, #06b6d4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.dstat-value, .pipe-count, .stat-highlight .stat-number,
+.stat-card .stat-value, .dash-card .num, .kt-stat .num {
+  background: linear-gradient(135deg, #0d5aa7, #4f46e5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Sidebar active item: gradient pill ── */
+.sidebar-nav .nav-link.active {
+  background: linear-gradient(135deg, rgba(37,99,235,0.14), rgba(124,58,237,0.12));
+  color: var(--primary-dark);
+}
+.sidebar-nav .nav-link.active .nav-icon { color: var(--primary); }
+.sidebar-nav .nav-link { transition: background 0.15s, color 0.15s, transform 0.12s ease; }
+.sidebar-nav .nav-link:hover { transform: translateX(2px); }
+
+/* ── Colourful dashboard stat icons ── */
+.dstat:nth-child(5n+1) .dstat-icon { background: var(--grad-primary); color: #fff; }
+.dstat:nth-child(5n+2) .dstat-icon { background: var(--grad-violet);  color: #fff; }
+.dstat:nth-child(5n+3) .dstat-icon { background: var(--grad-teal);    color: #fff; }
+.dstat:nth-child(5n+4) .dstat-icon { background: var(--grad-amber);   color: #fff; }
+.dstat:nth-child(5n+5) .dstat-icon { background: var(--grad-green);   color: #fff; }
+
+/* ── Badges: pop-in + soft ring ── */
+.badge { animation: badgePop 0.25s ease both; }
+
+/* ── Table rows: staggered entrance ── */
+tbody tr, .kt-table tbody tr { animation: rowIn 0.32s ease both; }
+tbody tr:nth-child(2) { animation-delay: 0.03s; }
+tbody tr:nth-child(3) { animation-delay: 0.06s; }
+tbody tr:nth-child(4) { animation-delay: 0.09s; }
+tbody tr:nth-child(5) { animation-delay: 0.12s; }
+tbody tr:nth-child(6) { animation-delay: 0.15s; }
+tbody tr:nth-child(n+7) { animation-delay: 0.18s; }
+
+/* ── Spinner gets a colour sweep ── */
+.spinner { border-top-color: #4f46e5; }
+
+/* ── Success / info alert accent bar ── */
+.success-message {
+  border-left: 3px solid var(--success);
+}
+
+/* ── Notification bell: gentle attention pulse when it has unread items ── */
+.bell-badge, .notif-dot, .unread-dot { animation: pulse 1.8s ease-in-out infinite; }
+
+/* ── Keyframes ── */
+@keyframes gradSlide { to { background-position: 200% 0; } }
+@keyframes badgePop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes rowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244,63,94,0.5); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 5px rgba(244,63,94,0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Continuous / ambient motion — always-on, not hover-dependent.
+   Still fully disabled under prefers-reduced-motion by the universal guard.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Slowly drifting multi-hue page background */
+body {
+  background-size: 200% 200%, 200% 200%, 200% 200%, auto;
+  animation: bgDrift 24s ease-in-out infinite;
+}
+
+/* Card top-accent: always visible + perpetually flowing */
+.card::before {
+  opacity: 1;
+  background-size: 300% 100%;
+  animation: gradFlow 6s linear infinite;
+}
+
+/* Gradient titles & numbers continuously shift their colours */
+.page-title, .dash-hello,
+.dstat-value, .pipe-count, .stat-highlight .stat-number,
+.stat-card .stat-value, .dash-card .num, .kt-stat .num {
+  background-size: 220% 220%;
+  animation: textFlow 8s ease infinite;
+}
+
+/* Primary buttons: periodic shine sweep even without hovering */
+.btn-primary::after {
+  animation: shineSweep 5.5s ease-in-out infinite;
+}
+
+/* Dashboard stat icons gently float, staggered */
+.dstat-icon { animation: floaty 4.5s ease-in-out infinite; }
+.dstat:nth-child(2) .dstat-icon { animation-delay: 0.6s; }
+.dstat:nth-child(3) .dstat-icon { animation-delay: 1.2s; }
+.dstat:nth-child(4) .dstat-icon { animation-delay: 1.8s; }
+.dstat:nth-child(5) .dstat-icon { animation-delay: 2.4s; }
+
+/* Pipeline step icons pulse continuously */
+.pipe-icon { animation: softPulse 3.2s ease-in-out infinite; }
+.pipe-step:nth-child(odd) .pipe-icon { animation-delay: 0.8s; }
+
+/* Active timeline dot keeps pulsing to show "current stage" */
+.timeline-step.active .timeline-dot { animation: ringPulse 2s ease-in-out infinite; }
+
+/* Sidebar active item: continuously flowing gradient pill */
+.sidebar-nav .nav-link.active {
+  background: linear-gradient(135deg, rgba(37,99,235,0.16), rgba(124,58,237,0.14), rgba(6,182,212,0.14));
+  background-size: 220% 220%;
+  animation: textFlow 7s ease infinite;
+}
+
+/* Avatars / brand logo breathe gently */
+.overview-avatar, .profile-avatar, .sidebar-logo-img { animation: floaty 5s ease-in-out infinite; }
+
+/* "Active" status badges softly breathe */
+.badge-active { animation: breathe 2.6s ease-in-out infinite; }
+
+/* Department bars shimmer to feel alive */
+.dept-bar-fill { position: relative; overflow: hidden; }
+.dept-bar-fill::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.45), transparent);
+  transform: translateX(-100%);
+  animation: barShimmer 2.8s ease-in-out infinite;
+}
+
+/* ── Continuous keyframes ── */
+@keyframes bgDrift {
+  0%   { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
+  50%  { background-position: 100% 50%, 0% 100%, 0% 0%, 0 0; }
+  100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
+}
+@keyframes gradFlow { to { background-position: 300% 0; } }
+@keyframes textFlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes shineSweep {
+  0%, 60% { left: -120%; }
+  100%    { left: 130%; }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes softPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50%      { transform: scale(1.06); filter: brightness(1.06); }
+}
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13,90,167,0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(13,90,167,0); }
+}
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.35); }
+  50%      { box-shadow: 0 0 0 4px rgba(22,163,74,0); }
+}
+@keyframes barShimmer {
+  0%   { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}

@@ -5,7 +5,13 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsAdmin
-from .serializers import LoginSerializer, TokenSerializer, UserCreateSerializer, UserSerializer
+from .serializers import (
+    ChangePasswordSerializer,
+    LoginSerializer,
+    TokenSerializer,
+    UserCreateSerializer,
+    UserSerializer,
+)
 
 
 class LoginView(APIView):
@@ -49,6 +55,17 @@ class CurrentUserView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ChangePasswordView(APIView):
+    """POST /api/auth/change-password/ - Change the authenticated user's password."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
 
 
 class RegisterView(APIView):

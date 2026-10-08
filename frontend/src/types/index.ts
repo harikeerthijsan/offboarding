@@ -99,6 +99,14 @@ export interface Employee {
   address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  aadhaar_number: string;
+  pan_number: string;
+  uan_number: string;
+  esi_number: string;
+  bank_name: string;
+  bank_account_holder_name: string;
+  bank_account_number: string;
+  bank_ifsc_code: string;
   direct_reports_count: number;
   created_at: string;
   updated_at: string;
@@ -189,6 +197,7 @@ export interface ResignationListItem {
 export interface ResignationRequest {
   id: number;
   employee_id: string;
+  employee_user_id: number;
   employee_name: string;
   employee_email: string;
   department_name: string;
@@ -419,6 +428,10 @@ export interface ClearanceSummary {
   };
   clearance_completed: boolean;
   clearance_completed_at: string | null;
+  asset_declaration_submitted: boolean;
+  asset_declaration_at: string | null;
+  asset_declaration_by_name: string | null;
+  asset_declaration_notes: string;
 }
 
 // ─── Phase 7: Final Settlement & Exit Interview ──────────────────────────────

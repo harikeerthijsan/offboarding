@@ -41,6 +41,7 @@ class ResignationRequestListSerializer(serializers.ModelSerializer):
 
 class ResignationRequestDetailSerializer(serializers.ModelSerializer):
     employee_id = serializers.CharField(source='employee.employee_id', read_only=True)
+    employee_user_id = serializers.IntegerField(source='employee.user_id', read_only=True)
     employee_name = serializers.SerializerMethodField()
     employee_email = serializers.EmailField(source='employee.email', read_only=True)
     department_name = serializers.CharField(
@@ -60,7 +61,7 @@ class ResignationRequestDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResignationRequest
         fields = [
-            'id', 'employee_id', 'employee_name', 'employee_email',
+            'id', 'employee_id', 'employee_user_id', 'employee_name', 'employee_email',
             'department_name', 'designation_name', 'manager_name',
             'status', 'status_display', 'reason', 'reason_display',
             'resignation_date', 'last_working_date', 'notice_policy_months', 'notes',

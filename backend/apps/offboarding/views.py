@@ -10,6 +10,7 @@ from apps.accounts.permissions import IsHR, IsAdmin
 from apps.audit.utils import log_action
 from apps.employees.models import Employee
 from apps.notifications.models import Notification
+from apps.notifications.emails import send_notification_email
 
 from .models import ResignationRequest, NoticePeriod, add_months, notice_months
 from .serializers import (
@@ -39,6 +40,7 @@ def _notify(recipient_user, notification_type, title, message, obj):
             related_object_type='ResignationRequest',
             related_object_id=obj.pk,
         )
+        send_notification_email(recipient_user, title, message)
 
 
 _UNSET = object()

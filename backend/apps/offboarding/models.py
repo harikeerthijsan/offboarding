@@ -143,6 +143,17 @@ class ResignationRequest(models.Model):
     )
     clearance_completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Employee's final asset-return declaration — the departing employee confirms
+    # they have returned/submitted all company assets. Description is optional.
+    asset_declaration_at = models.DateTimeField(null=True, blank=True)
+    asset_declaration_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='asset_declarations',
+    )
+    asset_declaration_notes = models.TextField(blank=True)
+
     # Phase 8: Final HR review & approval. This is a distinct review layer on top
     # of the resignation status machine — it never auto-marks the employee EXITED
     # (that is a later phase). Both dates are manually entered.

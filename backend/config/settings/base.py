@@ -159,6 +159,8 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='offboarding@jsanconsulting.com')
+# When True, every in-app notification is also emailed to the recipient.
+NOTIFICATION_EMAILS_ENABLED = config('NOTIFICATION_EMAILS_ENABLED', default=True, cast=bool)
 # How many days before the last working day to send the exit reminder.
 EXIT_REMINDER_DAYS = config('EXIT_REMINDER_DAYS', default=7, cast=int)
 

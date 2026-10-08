@@ -55,6 +55,10 @@ export default function ClearancePage() {
   const [verifyModal, setVerifyModal] = useState<{ ac: AssetClearance; action: 'verify' | 'reject' | 'mark_damaged' } | null>(null);
   const [verifyComments, setVerifyComments] = useState('');
 
+  // employee asset declaration
+  const [declConfirmed, setDeclConfirmed] = useState(false);
+  const [declNotes, setDeclNotes] = useState('');
+
   const load = useCallback(async () => {
     const [sum, d, ac] = await Promise.all([
       clearanceService.summary(oid),
@@ -190,6 +194,19 @@ export default function ClearancePage() {
     }
   }
 
+  async function handleSubmitDeclaration() {
+    setBusy(true); setActionError('');
+    try {
+      await clearanceService.submitAssetDeclaration(oid, declNotes);
+      setMsg('Your asset return declaration has been submitted.');
+      setDeclConfirmed(false);
+      setDeclNotes('');
+      await refresh();
+    } catch (err) {
+      setActionError(ktErrorMessage(err, 'Failed to submit declaration.'));
+    } finally { setBusy(false); }
+  }
+
   function canActAsset(ac: AssetClearance): boolean {
     return ['IT', 'ADMIN', 'HR'].includes(user?.role ?? '') && ac.status !== 'CLEARED' && ac.status !== 'LOST';
   }
@@ -200,6 +217,8 @@ export default function ClearancePage() {
 
   const d = summary.departments;
   const a = summary.assets;
+  const isOwner = resignation.employee_user_id === user?.id;
+  const declarationAvailable = ['APPROVED', 'NOTICE_PERIOD'].includes(resignation.status);
 
   return (
     <div>
@@ -219,6 +238,60 @@ export default function ClearancePage() {
 
       {msg && <div className="alert" style={{ marginBottom: 16, background: '#ecfdf5', color: '#047857' }}>{msg}</div>}
       {actionError && <div className="error-message" style={{ marginBottom: 16 }}>{actionError}</div>}
+
+      {/* Step 1 — Employee asset-return declaration. This comes BEFORE IT asset
+          clearance: the employee declares assets returned, which then opens the
+          IT asset clearance. */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Step 1 · Employee Asset Declaration</h3>
+
+        {summary.asset_declaration_submitted ? (
+          <div className="alert" style={{ background: '#ecfdf5', color: '#047857', padding: 14, borderRadius: 8 }}>
+            <strong>✓ Declaration submitted.</strong>
+            <div style={{ marginTop: 6, fontSize: 14 }}>
+              {summary.asset_declaration_by_name ? `${summary.asset_declaration_by_name} ` : 'The employee '}
+              declared that all company assets have been returned on {formatDate(summary.asset_declaration_at)}.
+              IT asset clearance is now in progress below.
+            </div>
+            {summary.asset_declaration_notes && (
+              <div style={{ marginTop: 8, fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Note: </span>{summary.asset_declaration_notes}
+              </div>
+            )}
+          </div>
+        ) : isOwner && declarationAvailable ? (
+          <div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 12 }}>
+              First, please confirm that you have returned or submitted all company assets assigned to you
+              (laptop, ID card, access card, devices, etc.). Once you submit this declaration, IT will begin
+              the asset clearance.
+            </p>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 12 }}>
+              <input type="checkbox" checked={declConfirmed} onChange={e => setDeclConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
+              <span style={{ fontSize: 14 }}>
+                I declare that I have returned/submitted all company assets assigned to me, and that I have
+                no outstanding company property in my possession.
+              </span>
+            </label>
+            <div className="form-group">
+              <label className="form-label">Description <span style={{ color: 'var(--text-muted)' }}>(optional)</span></label>
+              <textarea className="form-input" rows={3} value={declNotes} onChange={e => setDeclNotes(e.target.value)}
+                placeholder="Any notes about the assets you returned, pending items, or remarks…" />
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button className="btn btn-primary" onClick={handleSubmitDeclaration} disabled={busy || !declConfirmed}>
+                {busy ? <><span className="btn-spinner" /> Submitting…</> : 'Submit Declaration'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+            {isOwner
+              ? 'The asset declaration becomes available once your offboarding is approved and in progress.'
+              : 'Waiting for the employee to submit their asset-return declaration. IT asset clearance will begin once they do.'}
+          </p>
+        )}
+      </div>
 
       {/* Progress summary */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>

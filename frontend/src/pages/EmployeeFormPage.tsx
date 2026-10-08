@@ -5,6 +5,8 @@ import type { Department, Designation, Employee } from '../types';
 
 interface FormData {
   employee_id: string;
+  role: string;
+  password: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -21,14 +23,25 @@ interface FormData {
   address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  aadhaar_number: string;
+  pan_number: string;
+  uan_number: string;
+  esi_number: string;
+  bank_name: string;
+  bank_account_holder_name: string;
+  bank_account_number: string;
+  bank_ifsc_code: string;
 }
 
 const emptyForm: FormData = {
-  employee_id: '', first_name: '', last_name: '', email: '', phone: '',
+  employee_id: '', role: 'EMPLOYEE', password: '',
+  first_name: '', last_name: '', email: '', phone: '',
   date_of_birth: '', gender: '', department_id: '', designation_id: '',
   manager_id: '', joining_date: '', employment_type: 'FULL_TIME',
   employment_status: 'ACTIVE', location: '', address: '',
   emergency_contact_name: '', emergency_contact_phone: '',
+  aadhaar_number: '', pan_number: '', uan_number: '', esi_number: '',
+  bank_name: '', bank_account_holder_name: '', bank_account_number: '', bank_ifsc_code: '',
 };
 
 export default function EmployeeFormPage() {
@@ -53,6 +66,8 @@ export default function EmployeeFormPage() {
       employeeService.getEmployee(Number(id)).then((emp: Employee) => {
         setForm({
           employee_id: emp.employee_id,
+          role: emp.user?.role || 'EMPLOYEE',
+          password: '',
           first_name: emp.first_name,
           last_name: emp.last_name,
           email: emp.email,
@@ -69,6 +84,14 @@ export default function EmployeeFormPage() {
           address: emp.address || '',
           emergency_contact_name: emp.emergency_contact_name || '',
           emergency_contact_phone: emp.emergency_contact_phone || '',
+          aadhaar_number: emp.aadhaar_number || '',
+          pan_number: emp.pan_number || '',
+          uan_number: emp.uan_number || '',
+          esi_number: emp.esi_number || '',
+          bank_name: emp.bank_name || '',
+          bank_account_holder_name: emp.bank_account_holder_name || '',
+          bank_account_number: emp.bank_account_number || '',
+          bank_ifsc_code: emp.bank_ifsc_code || '',
         });
         if (emp.department?.id) {
           employeeService.getDesignations({ department: emp.department.id }).then(r => setDesignations(r.results));
@@ -98,6 +121,9 @@ export default function EmployeeFormPage() {
     if (!form.email.trim()) e.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Enter a valid email';
     if (!form.joining_date) e.joining_date = 'Joining date is required';
+    if (!isEdit && !form.department_id) e.department_id = 'Department is required';
+    if (!isEdit && !form.designation_id) e.designation_id = 'Designation is required';
+    if (!isEdit && form.password && form.password.length < 8) e.password = 'Password must be at least 8 characters';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -126,18 +152,32 @@ export default function EmployeeFormPage() {
       address: form.address || '',
       emergency_contact_name: form.emergency_contact_name || '',
       emergency_contact_phone: form.emergency_contact_phone || '',
+      aadhaar_number: form.aadhaar_number.replace(/\s/g, '') || '',
+      pan_number: form.pan_number.toUpperCase().trim() || '',
+      uan_number: form.uan_number.trim() || '',
+      esi_number: form.esi_number.trim() || '',
+      bank_name: form.bank_name || '',
+      bank_account_holder_name: form.bank_account_holder_name || '',
+      bank_account_number: form.bank_account_number.trim() || '',
+      bank_ifsc_code: form.bank_ifsc_code.toUpperCase().trim() || '',
     };
     try {
-      let result: Employee;
+      let result: Employee & { temporary_password?: string };
       if (isEdit && id) {
         result = await employeeService.updateEmployee(Number(id), payload);
+        setSuccess('Employee updated successfully.');
+        setTimeout(() => navigate(`/employees/${result.id}`), 1000);
       } else {
-        setApiError('To create an employee, a user account must be created first via Admin. This flow will be improved in a future phase.');
-        setLoading(false);
-        return;
+        payload.role = form.role;
+        if (form.password) payload.password = form.password;
+        result = await employeeService.createEmployee(payload);
+        if (result.temporary_password) {
+          setSuccess(`Employee created. A login account was provisioned for ${form.email}. Temporary password: ${result.temporary_password} — share it securely; the employee should change it on first login.`);
+        } else {
+          setSuccess('Employee created successfully. A login account was provisioned.');
+        }
+        setTimeout(() => navigate(`/employees/${result.id}`), 2500);
       }
-      setSuccess('Employee updated successfully.');
-      setTimeout(() => navigate(`/employees/${result.id}`), 1000);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: Record<string, string[]> } };
       if (axiosErr.response?.data) {
@@ -211,6 +251,33 @@ export default function EmployeeFormPage() {
           </div>
         </div>
 
+        {!isEdit && (
+          <div className="form-section">
+            <h3 className="form-section-title">Account Access</h3>
+            <p className="form-hint" style={{ marginTop: -4, marginBottom: 12, color: 'var(--text-muted)', fontSize: 13 }}>
+              A login account is created automatically using the employee's email. Leave the password blank to auto-generate a temporary one.
+            </p>
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Role</label>
+                <select className="form-input" value={form.role} onChange={set('role')}>
+                  <option value="EMPLOYEE">Employee</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="HR">HR</option>
+                  <option value="IT">IT</option>
+                  <option value="FINANCE">Finance</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Initial Password</label>
+                <input type="password" autoComplete="new-password" className={`form-input${errors.password ? ' input-error' : ''}`} value={form.password} onChange={set('password')} placeholder="Auto-generated if blank" />
+                {errors.password && <span className="field-error">{errors.password}</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="form-section">
           <h3 className="form-section-title">Employment Details</h3>
           <div className="form-grid">
@@ -237,18 +304,20 @@ export default function EmployeeFormPage() {
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Department</label>
-              <select className="form-input" value={form.department_id} onChange={set('department_id')}>
+              <label className="form-label">Department{isEdit ? '' : ' *'}</label>
+              <select className={`form-input${errors.department_id ? ' input-error' : ''}`} value={form.department_id} onChange={set('department_id')}>
                 <option value="">Select department</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
+              {errors.department_id && <span className="field-error">{errors.department_id}</span>}
             </div>
             <div className="form-group">
-              <label className="form-label">Designation</label>
-              <select className="form-input" value={form.designation_id} onChange={set('designation_id')} disabled={!form.department_id}>
+              <label className="form-label">Designation{isEdit ? '' : ' *'}</label>
+              <select className={`form-input${errors.designation_id ? ' input-error' : ''}`} value={form.designation_id} onChange={set('designation_id')} disabled={!form.department_id}>
                 <option value="">{form.department_id ? 'Select designation' : 'Select department first'}</option>
                 {designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
+              {errors.designation_id && <span className="field-error">{errors.designation_id}</span>}
             </div>
             <div className="form-group">
               <label className="form-label">Manager</label>
@@ -270,6 +339,12 @@ export default function EmployeeFormPage() {
           </div>
         </div>
 
+        {!isEdit && (
+          <div className="info-message" style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--surface-2, #f1f5f9)', borderRadius: 8, fontSize: 13, color: 'var(--text-muted)' }}>
+            The sections below (personal, emergency contact, statutory and bank details) are <strong>optional</strong>. You can fill in what you have now — the employee can complete or update these from their own profile after logging in.
+          </div>
+        )}
+
         <div className="form-section">
           <h3 className="form-section-title">Emergency Contact</h3>
           <div className="form-grid">
@@ -280,6 +355,54 @@ export default function EmployeeFormPage() {
             <div className="form-group">
               <label className="form-label">Contact Phone</label>
               <input className="form-input" value={form.emergency_contact_phone} onChange={set('emergency_contact_phone')} />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3 className="form-section-title">Statutory Details</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Aadhaar Number</label>
+              <input className={`form-input${errors.aadhaar_number ? ' input-error' : ''}`} value={form.aadhaar_number} onChange={set('aadhaar_number')} placeholder="123412341234" maxLength={12} inputMode="numeric" />
+              {errors.aadhaar_number && <span className="field-error">{errors.aadhaar_number}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">PAN Number</label>
+              <input className={`form-input${errors.pan_number ? ' input-error' : ''}`} value={form.pan_number} onChange={set('pan_number')} placeholder="ABCDE1234F" maxLength={10} style={{ textTransform: 'uppercase' }} />
+              {errors.pan_number && <span className="field-error">{errors.pan_number}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">UAN (PF)</label>
+              <input className={`form-input${errors.uan_number ? ' input-error' : ''}`} value={form.uan_number} onChange={set('uan_number')} placeholder="100123456789" maxLength={12} inputMode="numeric" />
+              {errors.uan_number && <span className="field-error">{errors.uan_number}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">ESI Number</label>
+              <input className="form-input" value={form.esi_number} onChange={set('esi_number')} placeholder="ESI IP number" maxLength={20} />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h3 className="form-section-title">Bank Details</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Bank Name</label>
+              <input className="form-input" value={form.bank_name} onChange={set('bank_name')} placeholder="e.g. HDFC Bank" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Account Holder Name</label>
+              <input className="form-input" value={form.bank_account_holder_name} onChange={set('bank_account_holder_name')} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Account Number</label>
+              <input className="form-input" value={form.bank_account_number} onChange={set('bank_account_number')} maxLength={20} inputMode="numeric" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">IFSC Code</label>
+              <input className={`form-input${errors.bank_ifsc_code ? ' input-error' : ''}`} value={form.bank_ifsc_code} onChange={set('bank_ifsc_code')} placeholder="HDFC0001234" maxLength={11} style={{ textTransform: 'uppercase' }} />
+              {errors.bank_ifsc_code && <span className="field-error">{errors.bank_ifsc_code}</span>}
             </div>
           </div>
         </div>

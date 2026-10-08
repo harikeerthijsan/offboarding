@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from apps.audit.utils import log_action
 from apps.employees.models import Employee
 from apps.notifications.models import Notification
+from apps.notifications.emails import send_notification_email
 from apps.offboarding.models import ResignationRequest
 
 from .models import OffboardingDocument, CompanyProfile
@@ -44,6 +45,7 @@ def _notify_doc(recipient_user, ntype, title, message, doc):
             related_object_type='OffboardingDocument', related_object_id=doc.pk,
             related_offboarding=doc.offboarding_request,
         )
+        send_notification_email(recipient_user, title, message)
 
 
 def _can_generate(resignation, user, document_type):

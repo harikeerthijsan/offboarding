@@ -15,6 +15,7 @@ from .serializers import (
     DesignationSerializer,
     EmployeeCreateSerializer,
     EmployeeListSerializer,
+    EmployeeSelfUpdateSerializer,
     EmployeeSerializer,
 )
 
@@ -170,10 +171,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         employee = serializer.save()
         log_action(request.user, 'EMPLOYEE_CREATED', employee, request=request)
-        return Response(
-            EmployeeSerializer(employee, context={'request': request}).data,
-            status=status.HTTP_201_CREATED,
-        )
+        data = EmployeeSerializer(employee, context={'request': request}).data
+        generated_password = getattr(employee, '_generated_password', None)
+        if generated_password:
+            data['temporary_password'] = generated_password
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -195,20 +197,54 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     def export(self, request):
         """Stream a CSV of employees matching the current filters (status, search,
         department, etc.) — same filtering as the list view. e.g.
-        /api/employees/export/?status=ACTIVE"""
-        from apps.offboarding.models import ExitInterview
-        qs = self.get_queryset()
+        /api/employees/export/?status=ACTIVE
+
+        Includes each employee's clearance status (KT, IT, Finance, HR, Admin,
+        Manager and overall) drawn from their most recent offboarding."""
+        from apps.offboarding.models import ExitInterview, ResignationRequest, DepartmentClearance
+        qs = list(self.get_queryset())
         status_label = (request.query_params.get('status') or 'all').lower()
 
         # employee_id -> exit interview status (single query)
         ei_map = {ei.employee_id: ei.get_status_display()
                   for ei in ExitInterview.objects.all()}
 
+        # employee_id -> most recent offboarding request
+        latest_offboarding = {}
+        for r in ResignationRequest.objects.filter(employee__in=qs).order_by('employee_id', '-created_at'):
+            latest_offboarding.setdefault(r.employee_id, r)
+
+        # offboarding_id -> {department: status display}
+        res_ids = [r.id for r in latest_offboarding.values()]
+        dc_map = {}
+        for dc in DepartmentClearance.objects.filter(offboarding_request_id__in=res_ids):
+            dc_map.setdefault(dc.offboarding_request_id, {})[dc.department] = dc.get_status_display()
+
+        def clearance_cells(employee):
+            off = latest_offboarding.get(employee.id)
+            if not off:
+                return ['—'] * 7
+            depts = dc_map.get(off.id, {})
+            kt = 'Completed' if off.kt_completed_at else 'Pending'
+            overall = 'Completed' if off.clearance_completed_at else 'Pending'
+            return [
+                kt,
+                depts.get('IT', '—'),
+                depts.get('FINANCE', '—'),
+                depts.get('HR', '—'),
+                depts.get('ADMIN', '—'),
+                depts.get('MANAGER', '—'),
+                overall,
+            ]
+
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="employees_{status_label}.csv"'
         writer = csv.writer(response)
         writer.writerow(['Employee ID', 'Name', 'Email', 'Department', 'Designation',
-                         'Manager', 'Status', 'Joining Date', 'Exit Interview'])
+                         'Manager', 'Status', 'Joining Date', 'Exit Interview',
+                         'Knowledge Transfer', 'IT Clearance', 'Finance Clearance',
+                         'HR Clearance', 'Admin Clearance', 'Manager Clearance',
+                         'Overall Clearance'])
         for e in qs:
             writer.writerow([
                 e.employee_id,
@@ -220,16 +256,27 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 e.get_employment_status_display(),
                 e.joining_date.isoformat() if e.joining_date else '',
                 ei_map.get(e.id, 'Not Started'),
+                *clearance_cells(e),
             ])
         return response
 
-    @action(detail=False, methods=['get'], url_path='me')
+    @action(detail=False, methods=['get', 'patch'], url_path='me')
     def me(self, request):
         try:
             employee = Employee.objects.select_related('user', 'department', 'designation', 'manager').get(user=request.user)
-            return Response(EmployeeSerializer(employee).data)
         except Employee.DoesNotExist:
             return Response({'detail': 'No employee profile found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'PATCH':
+            serializer = EmployeeSelfUpdateSerializer(
+                employee, data=request.data, partial=True, context={'request': request},
+            )
+            serializer.is_valid(raise_exception=True)
+            employee = serializer.save()
+            log_action(request.user, 'EMPLOYEE_UPDATED', employee, request=request)
+            return Response(serializer.data)
+
+        return Response(EmployeeSerializer(employee).data)
 
     @action(detail=True, methods=['get'], url_path='reports')
     def reports(self, request, pk=None):

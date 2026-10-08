@@ -1,6 +1,7 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -479,6 +480,31 @@ class NotificationTests(ResignationWorkflowSetup):
         # Verify count is 0
         r2 = self.client.get('/api/notifications/unread-count/')
         self.assertEqual(r2.data['unread_count'], 0)
+
+    def test_notification_also_sends_email(self):
+        """Submitting a resignation notifies the manager in-app AND by email."""
+        auth(self.client, self.employee_user)
+        r = self.client.post('/api/offboarding/', self.valid_payload, format='json')
+        rid = r.data['id']
+        mail.outbox = []
+        self.client.post(f'/api/offboarding/{rid}/submit/')
+        # Manager received an email mirroring the in-app notification.
+        self.assertTrue(mail.outbox)
+        recipients = [addr for m in mail.outbox for addr in m.to]
+        self.assertIn(self.manager_user.email, recipients)
+        self.assertTrue(mail.outbox[0].subject.startswith('[Offboarding]'))
+
+    @override_settings(NOTIFICATION_EMAILS_ENABLED=False)
+    def test_emails_can_be_disabled(self):
+        """With the flag off, in-app notifications still fire but no email is sent."""
+        auth(self.client, self.employee_user)
+        r = self.client.post('/api/offboarding/', self.valid_payload, format='json')
+        rid = r.data['id']
+        mail.outbox = []
+        before = Notification.objects.count()
+        self.client.post(f'/api/offboarding/{rid}/submit/')
+        self.assertGreater(Notification.objects.count(), before)  # in-app still created
+        self.assertEqual(len(mail.outbox), 0)                      # but no email
 
 
 # ─── Phase 4: Notice Period Tests ────────────────────────────────────────────
@@ -1964,7 +1990,9 @@ class KTSummaryAndPhaseTest(KTSetup):
         r = self.client.post(f'/api/offboarding/{self.rid}/kt/complete/')
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_kt_complete_auto_creates_it_and_finance_clearance(self):
+    def test_kt_complete_creates_finance_not_it_clearance(self):
+        """KT complete creates Finance only; IT clearance waits for the employee's
+        asset declaration."""
         kt_id = self._kt_to_manager_review()
         auth(self.client, self.manager_user)
         self.client.post(f'/api/kt/{kt_id}/manager-action/',
@@ -1974,8 +2002,8 @@ class KTSummaryAndPhaseTest(KTSetup):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         depts = set(DepartmentClearance.objects.filter(
             offboarding_request_id=self.rid).values_list('department', flat=True))
-        self.assertIn('IT', depts)
         self.assertIn('FINANCE', depts)
+        self.assertNotIn('IT', depts)
 
     def test_hr_can_clear_finance_clearance(self):
         kt_id = self._kt_to_manager_review()
@@ -2494,5 +2522,70 @@ class ClearanceDateRuleTest(ClearanceSetup):
                           {'action': 'record_return', 'return_date': '2026-10-10', 'condition': 'GOOD'}, format='json')
         r = self.client.patch(f'/api/asset-clearance/{ac_id}/', {'action': 'verify'}, format='json')
         self.assertEqual(r.data['return_date'], '2026-10-10')  # unchanged by verify
+
+
+class AssetDeclarationTest(ClearanceSetup):
+    """Employee's final asset-return declaration."""
+
+    def _url(self):
+        return f'/api/offboarding/{self.rid}/asset-declaration/'
+
+    def test_employee_can_submit_declaration_with_notes(self):
+        auth(self.client, self.employee_user)
+        r = self.client.post(self._url(), {'notes': 'Returned laptop and ID card.'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        res = ResignationRequest.objects.get(pk=self.rid)
+        self.assertIsNotNone(res.asset_declaration_at)
+        self.assertEqual(res.asset_declaration_by, self.employee_user)
+        self.assertEqual(res.asset_declaration_notes, 'Returned laptop and ID card.')
+
+    def test_notes_are_optional(self):
+        auth(self.client, self.employee_user)
+        r = self.client.post(self._url(), {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        res = ResignationRequest.objects.get(pk=self.rid)
+        self.assertIsNotNone(res.asset_declaration_at)
+        self.assertEqual(res.asset_declaration_notes, '')
+
+    def test_cannot_declare_twice(self):
+        auth(self.client, self.employee_user)
+        self.client.post(self._url(), {}, format='json')
+        r = self.client.post(self._url(), {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_only_owner_can_declare(self):
+        auth(self.client, self.employee_user2)  # a different employee
+        r = self.client.post(self._url(), {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_hr_cannot_declare_on_behalf(self):
+        auth(self.client, self.hr_user)
+        r = self.client.post(self._url(), {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_declaration_appears_in_clearance_summary(self):
+        auth(self.client, self.employee_user)
+        self.client.post(self._url(), {'notes': 'All returned.'}, format='json')
+        r = self.client.get(f'/api/offboarding/{self.rid}/clearance/summary/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertTrue(r.data['asset_declaration_submitted'])
+        self.assertEqual(r.data['asset_declaration_notes'], 'All returned.')
+        self.assertIsNotNone(r.data['asset_declaration_by_name'])
+
+    def test_it_clearance_created_only_after_declaration(self):
+        # Before the declaration, there is no IT clearance and no asset clearances.
+        self.assertFalse(DepartmentClearance.objects.filter(
+            offboarding_request_id=self.rid, department='IT').exists())
+        self.assertFalse(AssetClearance.objects.filter(offboarding_request_id=self.rid).exists())
+
+        auth(self.client, self.employee_user)
+        self.client.post(self._url(), {}, format='json')
+
+        # The declaration creates the IT clearance and queues the assigned asset.
+        self.assertTrue(DepartmentClearance.objects.filter(
+            offboarding_request_id=self.rid, department='IT').exists())
+        ac = AssetClearance.objects.filter(offboarding_request_id=self.rid)
+        self.assertEqual(ac.count(), 1)
+        self.assertEqual(ac.first().asset_id, self.asset.id)
 
 

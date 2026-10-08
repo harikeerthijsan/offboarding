@@ -71,6 +71,26 @@ def _notify_hr(title, message, obj):
         _notify(hr_user, 'STATUS_UPDATE', title, message, obj)
 
 
+def _create_it_asset_clearance(resignation):
+    """Set up the IT asset clearance after the employee's asset declaration:
+    an IT department clearance + a checklist item, and queue each of the
+    employee's assigned assets for IT to confirm return. Idempotent."""
+    emp = resignation.employee
+
+    it_dc, _ = DepartmentClearance.objects.get_or_create(
+        offboarding_request=resignation, department='IT', defaults={'status': 'PENDING'})
+    ClearanceChecklistItem.objects.get_or_create(
+        department_clearance=it_dc, title='Company assets returned & verified',
+        defaults={'status': 'PENDING'})
+
+    for asset in Asset.objects.filter(assigned_to=emp).exclude(status__in=['CLEARED', 'LOST']):
+        _, made = AssetClearance.objects.get_or_create(
+            offboarding_request=resignation, asset=asset,
+            defaults={'employee': emp, 'status': 'RETURN_PENDING'})
+        if made and asset.status == 'ASSIGNED':
+            Asset.objects.filter(pk=asset.pk).update(status='RETURN_PENDING')
+
+
 # ─── Assets (catalogue) ──────────────────────────────────────────────────────
 
 class AssetListCreateView(APIView):
@@ -584,11 +604,78 @@ class ClearanceSummaryView(APIView):
                    'DAMAGED': 'damaged', 'LOST': 'lost', 'REJECTED': 'rejected'}[s]
             asset_counts[key] += 1
 
+        decl_by = resignation.asset_declaration_by
+        decl_by_name = None
+        if decl_by:
+            decl_by_name = f"{decl_by.first_name} {decl_by.last_name}".strip() or decl_by.email
+
         return Response({
             'departments': dept_counts,
             'assets': asset_counts,
             'clearance_completed': resignation.clearance_completed_at is not None,
             'clearance_completed_at': resignation.clearance_completed_at,
+            'asset_declaration_submitted': resignation.asset_declaration_at is not None,
+            'asset_declaration_at': resignation.asset_declaration_at,
+            'asset_declaration_by_name': decl_by_name,
+            'asset_declaration_notes': resignation.asset_declaration_notes,
+        })
+
+
+class AssetDeclarationView(APIView):
+    """POST /api/offboarding/{pk}/asset-declaration/ — the departing employee
+    declares they have returned/submitted all company assets. Notes optional."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        with transaction.atomic():
+            try:
+                resignation = ResignationRequest.objects.select_for_update().select_related('employee').get(pk=pk)
+            except ResignationRequest.DoesNotExist:
+                return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Only the offboarding employee (or admin) may make the declaration.
+            is_owner = resignation.employee.user_id == request.user.pk
+            if not (is_owner or request.user.role == 'ADMIN'):
+                return Response({'detail': 'Only the offboarding employee can make this declaration.'},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            if resignation.status not in ('APPROVED', 'NOTICE_PERIOD'):
+                return Response(
+                    {'detail': 'The asset declaration is only available once the offboarding is approved and in progress.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if resignation.asset_declaration_at is not None:
+                return Response({'detail': 'You have already submitted the asset declaration.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            notes = (request.data.get('notes') or '').strip()
+            resignation.asset_declaration_at = timezone.now()
+            resignation.asset_declaration_by = request.user
+            resignation.asset_declaration_notes = notes
+            resignation.save(update_fields=[
+                'asset_declaration_at', 'asset_declaration_by', 'asset_declaration_notes', 'updated_at',
+            ])
+            log_action(actor=request.user, action='ASSET_DECLARATION_SUBMITTED', target_obj=resignation,
+                       changes={'notes': notes}, request=request)
+
+            # The declaration unlocks the IT asset clearance.
+            _create_it_asset_clearance(resignation)
+            log_action(actor=request.user, action='CLEARANCES_AUTO_CREATED', target_obj=resignation,
+                       changes={'departments': ['IT']}, request=request)
+
+            name = f"{resignation.employee.first_name} {resignation.employee.last_name}".strip()
+            for u in User.objects.filter(role__in=['IT', 'ADMIN'], is_active=True):
+                _notify(u, 'CLEARANCE_ACTION_REQUIRED', 'IT asset clearance required',
+                        f'{name} has declared all company assets returned. '
+                        f'Please verify asset returns and complete IT clearance.', resignation)
+            _notify_hr('Asset return declaration submitted',
+                       f'{name} has declared that all company assets have been returned.', resignation)
+
+        return Response({
+            'detail': 'Asset declaration submitted. IT asset clearance has been created.',
+            'asset_declaration_at': resignation.asset_declaration_at,
+            'asset_declaration_notes': resignation.asset_declaration_notes,
         })
 
 

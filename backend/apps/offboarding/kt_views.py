@@ -94,28 +94,11 @@ def _notify_hr(title, message, obj):
 
 
 def _auto_create_clearances(resignation):
-    """Once notice period + KT are done, set up the IT asset clearance and the
-    Finance clearance so IT and HR/Finance can action them (no manual add needed).
+    """Once KT is done, set up the Finance clearance so HR/Finance can sign off.
+    The IT asset clearance is NOT created here — it is created only after the
+    employee submits their asset-return declaration (see AssetDeclarationView).
     Returns the list of departments newly created."""
     created = []
-    emp = resignation.employee
-
-    # IT clearance — asset return confirmation
-    it_dc, made_it = DepartmentClearance.objects.get_or_create(
-        offboarding_request=resignation, department='IT', defaults={'status': 'PENDING'})
-    if made_it:
-        created.append('IT')
-        ClearanceChecklistItem.objects.get_or_create(
-            department_clearance=it_dc, title='Company assets returned & verified',
-            defaults={'status': 'PENDING'})
-
-    # Queue the employee's assigned assets for IT to confirm return
-    for asset in Asset.objects.filter(assigned_to=emp).exclude(status__in=['CLEARED', 'LOST']):
-        _, made = AssetClearance.objects.get_or_create(
-            offboarding_request=resignation, asset=asset,
-            defaults={'employee': emp, 'status': 'RETURN_PENDING'})
-        if made and asset.status == 'ASSIGNED':
-            Asset.objects.filter(pk=asset.pk).update(status='RETURN_PENDING')
 
     # Finance clearance — HR or Finance can sign off
     _, made_fin = DepartmentClearance.objects.get_or_create(
@@ -369,22 +352,26 @@ class KTPhaseCompleteView(APIView):
                 resignation,
             )
 
-            # Auto-create the next clearance steps: IT asset clearance + Finance clearance
+            # Auto-create the Finance clearance. The IT asset clearance is created
+            # only after the employee submits their asset-return declaration.
             created = _auto_create_clearances(resignation)
             log_action(actor=request.user, action='CLEARANCES_AUTO_CREATED', target_obj=resignation,
                        changes={'departments': created}, request=request)
             name = f"{resignation.employee.first_name} {resignation.employee.last_name}"
-            if 'IT' in created:
-                for u in User.objects.filter(role__in=['IT', 'ADMIN'], is_active=True):
-                    _notify(u, 'CLEARANCE_ACTION_REQUIRED', 'IT asset clearance required',
-                            f'Please confirm asset return and clearance for {name}.', resignation)
             if 'FINANCE' in created:
                 for u in User.objects.filter(role__in=['FINANCE', 'HR', 'ADMIN'], is_active=True):
                     _notify(u, 'CLEARANCE_ACTION_REQUIRED', 'Finance clearance required',
                             f'Please complete finance clearance for {name}.', resignation)
+            # Ask the employee to declare their assets returned — this unlocks IT clearance.
+            _notify(resignation.employee.user, 'ACTION_REQUIRED',
+                    'Asset return declaration required',
+                    'Please declare that you have returned all company assets. '
+                    'IT asset clearance will begin once you submit your declaration.',
+                    resignation)
 
         return Response({
-            'detail': 'Knowledge transfer marked complete. IT asset clearance and finance clearance have been created.',
+            'detail': 'Knowledge transfer marked complete. Finance clearance created; '
+                      'the employee has been asked to submit their asset-return declaration.',
             'kt_completed_at': resignation.kt_completed_at,
             'clearances_created': created,
         })

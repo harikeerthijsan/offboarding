@@ -56,6 +56,11 @@ class BaseTestCase(APITestCase):
             code='ENG',
             description='Software Engineering',
         )
+        self.designation = Designation.objects.create(
+            name='Base Engineer',
+            code='BASE',
+            department=self.department,
+        )
 
     def auth(self, user):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {get_token(user)}')
@@ -227,10 +232,173 @@ class EmployeeTest(BaseTestCase):
             'last_name': 'Employee',
             'email': self.new_user.email,
             'department_id': self.department.id,
+            'designation_id': self.designation.id,
             'joining_date': '2023-06-01',
         }
         response = self.client.post(self.list_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_employee_provisions_user_account(self):
+        """When no user_id is given, a login account is auto-created."""
+        self.auth(self.hr_user)
+        data = {
+            'employee_id': 'EMP300',
+            'first_name': 'Provisioned',
+            'last_name': 'User',
+            'email': 'provisioned@example.com',
+            'role': 'MANAGER',
+            'department_id': self.department.id,
+            'designation_id': self.designation.id,
+            'joining_date': '2023-06-01',
+            'pan_number': 'abcde1234f',
+            'uan_number': '100123456789',
+            'bank_ifsc_code': 'hdfc0001234',
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # A temp password is returned since none was supplied.
+        self.assertIn('temporary_password', response.data)
+        emp = Employee.objects.get(employee_id='EMP300')
+        self.assertIsNotNone(emp.user)
+        self.assertEqual(emp.user.email, 'provisioned@example.com')
+        self.assertEqual(emp.user.username, 'EMP300')
+        self.assertEqual(emp.user.role, 'MANAGER')
+        self.assertTrue(emp.user.check_password(response.data['temporary_password']))
+        # Statutory fields normalized.
+        self.assertEqual(emp.pan_number, 'ABCDE1234F')
+        self.assertEqual(emp.bank_ifsc_code, 'HDFC0001234')
+
+    def test_create_employee_with_explicit_password(self):
+        self.auth(self.hr_user)
+        data = {
+            'employee_id': 'EMP301',
+            'first_name': 'Set',
+            'last_name': 'Password',
+            'email': 'setpw@example.com',
+            'password': 'strongpass123',
+            'department_id': self.department.id,
+            'designation_id': self.designation.id,
+            'joining_date': '2023-06-01',
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertNotIn('temporary_password', response.data)
+        emp = Employee.objects.get(employee_id='EMP301')
+        self.assertTrue(emp.user.check_password('strongpass123'))
+
+    def test_create_employee_duplicate_email_rejected(self):
+        self.auth(self.hr_user)
+        data = {
+            'employee_id': 'EMP302',
+            'first_name': 'Dup',
+            'last_name': 'Email',
+            'email': self.employee_user.email,  # already belongs to a user
+            'department_id': self.department.id,
+            'designation_id': self.designation.id,
+            'joining_date': '2023-06-01',
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
+
+    def test_create_employee_invalid_pan_rejected(self):
+        self.auth(self.hr_user)
+        data = {
+            'employee_id': 'EMP303',
+            'first_name': 'Bad',
+            'last_name': 'Pan',
+            'email': 'badpan@example.com',
+            'department_id': self.department.id,
+            'designation_id': self.designation.id,
+            'joining_date': '2023-06-01',
+            'pan_number': '12345',
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('pan_number', response.data)
+
+    def test_create_employee_requires_department_and_designation(self):
+        """Company-mandated fields must be provided on create."""
+        self.auth(self.hr_user)
+        data = {
+            'employee_id': 'EMP310',
+            'first_name': 'No',
+            'last_name': 'Company',
+            'email': 'nocompany@example.com',
+            'joining_date': '2023-06-01',
+        }
+        response = self.client.post(self.list_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('department_id', response.data)
+        self.assertIn('designation_id', response.data)
+
+    def test_self_update_own_personal_details(self):
+        """An employee can edit their own personal details via /me/."""
+        emp = self._create_employee(self.employee_user, 'EMP600')
+        self.auth(self.employee_user)
+        payload = {
+            'phone': '+91 9000000000',
+            'address': '12 Main Street, Chennai',
+            'emergency_contact_name': 'Sibling',
+            'pan_number': 'abcde1234f',
+        }
+        response = self.client.patch(f'{self.list_url}me/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        emp.refresh_from_db()
+        self.assertEqual(emp.phone, '+91 9000000000')
+        self.assertEqual(emp.address, '12 Main Street, Chennai')
+        self.assertEqual(emp.pan_number, 'ABCDE1234F')
+
+    def test_self_update_cannot_change_company_fields(self):
+        """Company-controlled fields are ignored on self-update."""
+        emp = self._create_employee(self.employee_user, 'EMP601')
+        original_emp_id = emp.employee_id
+        self.auth(self.employee_user)
+        payload = {
+            'employee_id': 'HACKED',
+            'employment_status': 'EXITED',
+            'department_id': 999,
+            'phone': '12345',
+        }
+        response = self.client.patch(f'{self.list_url}me/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        emp.refresh_from_db()
+        self.assertEqual(emp.employee_id, original_emp_id)
+        self.assertEqual(emp.employment_status, 'ACTIVE')
+        self.assertEqual(emp.phone, '12345')  # personal field still updated
+
+    def test_self_update_invalid_pan_rejected(self):
+        self._create_employee(self.employee_user, 'EMP602')
+        self.auth(self.employee_user)
+        response = self.client.patch(f'{self.list_url}me/', {'pan_number': 'bad'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('pan_number', response.data)
+
+    def test_export_includes_clearance_columns(self):
+        from apps.offboarding.models import ResignationRequest, DepartmentClearance
+        emp = self._create_employee(self.employee_user, 'EMP700')
+        emp.employment_status = 'EXITED'
+        emp.save(update_fields=['employment_status'])
+        from django.utils import timezone
+        off = ResignationRequest.objects.create(
+            employee=emp, reason='PERSONAL_REASONS', resignation_date='2026-01-01',
+            status='COMPLETED', kt_completed_at=timezone.now(), clearance_completed_at=timezone.now(),
+        )
+        DepartmentClearance.objects.create(offboarding_request=off, department='IT', status='CLEARED')
+        DepartmentClearance.objects.create(offboarding_request=off, department='FINANCE', status='CLEARED')
+
+        self.auth(self.hr_user)
+        response = self.client.get(f'{self.list_url}export/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('text/csv', response['Content-Type'])
+        body = response.content.decode('utf-8')
+        # Headers present
+        for header in ['Knowledge Transfer', 'IT Clearance', 'Finance Clearance', 'Overall Clearance']:
+            self.assertIn(header, body)
+        # The EMP700 row reflects cleared/completed statuses
+        row = [line for line in body.splitlines() if line.startswith('EMP700')][0]
+        self.assertIn('Cleared', row)
+        self.assertIn('Completed', row)
 
     def test_employee_cannot_create_employee(self):
         self.auth(self.employee_user)
@@ -306,6 +474,7 @@ class EmployeeTest(BaseTestCase):
             'last_name': 'Smith',
             'email': self.new_user.email,
             'department_id': self.department.id,
+            'designation_id': self.designation.id,
             'joining_date': '2023-06-01',
         }
         response = self.client.post(self.list_url, data, format='json')
@@ -443,6 +612,7 @@ class EmployeeTest(BaseTestCase):
             'last_name': 'Test',
             'email': self.new_user.email,
             'department_id': self.department.id,
+            'designation_id': self.designation.id,
             'joining_date': '2023-06-01',
         }
         self.client.post(self.list_url, data, format='json')

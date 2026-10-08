@@ -143,3 +143,68 @@ class RegisterViewTest(APITestCase):
         }
         response = self.client.post(self.register_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class ChangePasswordViewTest(APITestCase):
+    """Test /api/auth/change-password/ endpoint."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='changepw@example.com', username='changepw',
+            password='OldPass123', role='EMPLOYEE',
+        )
+        self.url = reverse('change-password')
+
+    def _auth(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = str(RefreshToken.for_user(user).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_change_password_success(self):
+        self._auth(self.user)
+        resp = self.client.post(self.url, {
+            'current_password': 'OldPass123',
+            'new_password': 'BrandNew456',
+            'confirm_password': 'BrandNew456',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('BrandNew456'))
+
+    def test_wrong_current_password_rejected(self):
+        self._auth(self.user)
+        resp = self.client.post(self.url, {
+            'current_password': 'WrongPass',
+            'new_password': 'BrandNew456',
+            'confirm_password': 'BrandNew456',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('current_password', resp.data)
+
+    def test_mismatched_confirmation_rejected(self):
+        self._auth(self.user)
+        resp = self.client.post(self.url, {
+            'current_password': 'OldPass123',
+            'new_password': 'BrandNew456',
+            'confirm_password': 'Different789',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('confirm_password', resp.data)
+
+    def test_weak_password_rejected(self):
+        self._auth(self.user)
+        resp = self.client.post(self.url, {
+            'current_password': 'OldPass123',
+            'new_password': '123',
+            'confirm_password': '123',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', resp.data)
+
+    def test_unauthenticated_rejected(self):
+        resp = self.client.post(self.url, {
+            'current_password': 'OldPass123',
+            'new_password': 'BrandNew456',
+            'confirm_password': 'BrandNew456',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)

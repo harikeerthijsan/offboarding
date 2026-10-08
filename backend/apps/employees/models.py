@@ -108,6 +108,16 @@ class Employee(models.Model):
     address = models.TextField(blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
+    # Statutory / identity details (India)
+    aadhaar_number = models.CharField(max_length=12, blank=True)
+    pan_number = models.CharField(max_length=10, blank=True)
+    uan_number = models.CharField(max_length=12, blank=True)
+    esi_number = models.CharField(max_length=20, blank=True)
+    # Bank details
+    bank_name = models.CharField(max_length=100, blank=True)
+    bank_account_holder_name = models.CharField(max_length=100, blank=True)
+    bank_account_number = models.CharField(max_length=20, blank=True)
+    bank_ifsc_code = models.CharField(max_length=11, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

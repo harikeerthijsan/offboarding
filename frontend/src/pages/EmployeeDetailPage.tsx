@@ -124,6 +124,32 @@ export default function EmployeeDetailPage() {
           </dl>
         </div>
 
+        {/* Statutory Details — HR/Admin only */}
+        {canManage && (
+          <div className="card">
+            <h3 className="section-title">Statutory Details</h3>
+            <dl className="info-list">
+              <InfoRow label="Aadhaar Number" value={employee.aadhaar_number} />
+              <InfoRow label="PAN Number" value={employee.pan_number} />
+              <InfoRow label="UAN (PF)" value={employee.uan_number} />
+              <InfoRow label="ESI Number" value={employee.esi_number} />
+            </dl>
+          </div>
+        )}
+
+        {/* Bank Details — HR/Admin only */}
+        {canManage && (
+          <div className="card">
+            <h3 className="section-title">Bank Details</h3>
+            <dl className="info-list">
+              <InfoRow label="Bank Name" value={employee.bank_name} />
+              <InfoRow label="Account Holder" value={employee.bank_account_holder_name} />
+              <InfoRow label="Account Number" value={employee.bank_account_number} />
+              <InfoRow label="IFSC Code" value={employee.bank_ifsc_code} />
+            </dl>
+          </div>
+        )}
+
         {/* System Info */}
         <div className="card">
           <h3 className="section-title">System Information</h3>

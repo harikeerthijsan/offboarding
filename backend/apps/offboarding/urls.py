@@ -27,6 +27,7 @@ urlpatterns = [
     path('<int:pk>/clearances/', clearance_views.DepartmentClearanceListCreateView.as_view(), name='dept-clearance-list'),
     path('<int:pk>/clearance/summary/', clearance_views.ClearanceSummaryView.as_view(), name='clearance-summary'),
     path('<int:pk>/clearance/complete/', clearance_views.ClearanceCompleteView.as_view(), name='clearance-complete'),
+    path('<int:pk>/asset-declaration/', clearance_views.AssetDeclarationView.as_view(), name='asset-declaration'),
     # Phase 7 — Final Settlement (per offboarding)
     path('<int:pk>/settlement/', settlement_views.SettlementView.as_view(), name='settlement'),
     path('<int:pk>/settlement/submit/', settlement_views.SettlementSubmitView.as_view(), name='settlement-submit'),

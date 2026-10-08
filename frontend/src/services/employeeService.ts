@@ -17,6 +17,11 @@ export const employeeService = {
     return data;
   },
 
+  updateMyProfile: async (payload: Record<string, unknown>): Promise<Employee> => {
+    const { data } = await api.patch<Employee>('/employees/me/', payload);
+    return data;
+  },
+
   createEmployee: async (payload: Record<string, unknown>): Promise<Employee> => {
     const { data } = await api.post<Employee>('/employees/', payload);
     return data;

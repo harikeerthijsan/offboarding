@@ -33,4 +33,15 @@ export const authService = {
     const { data } = await api.post<AuthTokens>('/auth/token/refresh/', { refresh });
     return data;
   },
+
+  changePassword: async (
+    currentPassword: string, newPassword: string, confirmPassword: string,
+  ): Promise<{ detail: string }> => {
+    const { data } = await api.post<{ detail: string }>('/auth/change-password/', {
+      current_password: currentPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    });
+    return data;
+  },
 };
