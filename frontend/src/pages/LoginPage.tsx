@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="login-card">
           <div className="login-header">
             <img src="/jsanlogo.png" alt="JSAN" className="login-logo" />
-            <h1>Employee Offboarding</h1>
+            <h1>JSAN PEOPLE360</h1>
             <p>Sign in to your account to continue</p>
           </div>
 
@@ -105,7 +105,7 @@ export default function LoginPage() {
           </form>
 
           <div className="login-footer">
-            <p>Employee Offboarding Management System</p>
+            <p>JSAN PEOPLE360 — Employee Offboarding Management</p>
           </div>
         </div>
       </div>

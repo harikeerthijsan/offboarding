@@ -492,13 +492,13 @@ class NotificationTests(ResignationWorkflowSetup):
         self.assertTrue(mail.outbox)
         recipients = [addr for m in mail.outbox for addr in m.to]
         self.assertIn(self.manager_user.email, recipients)
-        self.assertTrue(mail.outbox[0].subject.startswith('[Offboarding]'))
+        self.assertTrue(mail.outbox[0].subject.startswith('[JSAN PEOPLE360]'))
         # Production email is multipart: plain text + branded HTML alternative.
         msg = mail.outbox[0]
         self.assertTrue(msg.alternatives)
         html, mime = msg.alternatives[0]
         self.assertEqual(mime, 'text/html')
-        self.assertIn('Offboarding Management', html)
+        self.assertIn('JSAN PEOPLE360', html)
 
     @override_settings(FRONTEND_URL='https://app.example.com')
     def test_email_includes_action_link_when_frontend_url_set(self):

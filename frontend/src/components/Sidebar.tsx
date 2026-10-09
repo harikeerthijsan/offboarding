@@ -103,7 +103,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <img src="/jsanlogo.png" alt="JSAN" className="sidebar-logo-img" />
-        <span>Offboarding Management</span>
+        <span>JSAN PEOPLE360</span>
       </div>
 
       <nav className="sidebar-nav">

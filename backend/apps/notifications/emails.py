@@ -44,7 +44,7 @@ def _html_body(title, message, link):
              style="background:#ffffff;border:1px solid #e6e9f0;border-radius:12px;overflow:hidden;max-width:560px;width:100%">
         <tr><td style="height:6px;background:linear-gradient(90deg,#1e85d8,#4f46e5,#06b6d4)"></td></tr>
         <tr><td style="padding:28px 28px 8px">
-          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#98a2b3;text-transform:uppercase">Offboarding Management</div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#98a2b3;text-transform:uppercase">JSAN PEOPLE360</div>
           <h1 style="margin:10px 0 0;font-size:19px;color:#101828">{safe_title}</h1>
         </td></tr>
         <tr><td style="padding:8px 28px 4px;font-size:14px;line-height:1.6;color:#566072">{safe_msg}</td></tr>
@@ -52,7 +52,7 @@ def _html_body(title, message, link):
           <table role="presentation" cellpadding="0" cellspacing="0">{button}</table>
         </td></tr>
         <tr><td style="padding:16px 28px;background:#f8fafd;border-top:1px solid #e6e9f0;font-size:12px;color:#98a2b3">
-          This is an automated message from the Offboarding Management system. Please do not reply.
+          This is an automated message from JSAN PEOPLE360. Please do not reply.
         </td></tr>
       </table>
     </td></tr>
@@ -80,7 +80,7 @@ def send_notification_email(recipient_user, title, message, link=None):
     action_link = link or (frontend or None)
 
     msg = EmailMultiAlternatives(
-        subject=f"[Offboarding] {title}",
+        subject=f"[JSAN PEOPLE360] {title}",
         body=message,  # plain-text part
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[email],

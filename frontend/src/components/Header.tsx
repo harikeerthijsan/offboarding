@@ -38,7 +38,7 @@ export default function Header() {
   const [unread, setUnread] = useState(0);
   const [recent, setRecent] = useState<NotificationItem[]>([]);
 
-  const pageTitle = PAGE_TITLES[location.pathname] ?? 'Employee Offboarding';
+  const pageTitle = PAGE_TITLES[location.pathname] ?? 'JSAN PEOPLE360';
 
   const refreshUnread = useCallback(async () => {
     try { setUnread(await notificationService.unreadCount()); } catch { /* ignore */ }

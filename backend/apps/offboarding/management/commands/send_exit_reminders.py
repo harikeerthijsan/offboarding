@@ -100,7 +100,7 @@ class Command(BaseCommand):
                 if emails:
                     try:
                         send_mail(
-                            subject=f"[Offboarding] {title}: {name}",
+                            subject=f"[JSAN PEOPLE360] {title}: {name}",
                             message=msg,
                             from_email=settings.DEFAULT_FROM_EMAIL,
                             recipient_list=emails,
