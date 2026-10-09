@@ -34,6 +34,20 @@ const RES_BADGE: Record<string, string> = {
   COMPLETED: 'badge-active', REJECTED: 'badge-exited', CANCELLED: 'badge-offboarding',
 };
 
+function tenureLabel(joining?: string | null): string {
+  if (!joining) return '—';
+  const start = new Date(joining);
+  if (isNaN(start.getTime())) return '—';
+  const now = new Date();
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (now.getDate() < start.getDate()) months -= 1;
+  if (months < 0) months = 0;
+  const y = Math.floor(months / 12), m = months % 12;
+  if (y === 0) return `${m} mo`;
+  if (m === 0) return `${y} yr`;
+  return `${y}y ${m}m`;
+}
+
 function EmployeeDashboard() {
   const { user } = useAuthContext();
   const navigate = useNavigate();
@@ -53,27 +67,62 @@ function EmployeeDashboard() {
       .catch(() => {});
   }, [user?.id]);
 
-  const fullName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : (user?.first_name || user?.username || 'there');
+  const firstName = emp?.first_name || user?.first_name || user?.username || 'there';
+  const fullName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : firstName;
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
   if (loading) return <div className="loading-state"><div className="spinner" /><p>Loading your dashboard…</p></div>;
 
+  const tiles: { label: string; value: string; icon: IconName; grad: string }[] = [
+    { label: 'Status', value: emp ? emp.employment_status.replace('_', ' ') : (user?.role || '—'), icon: 'user-check', grad: 'linear-gradient(135deg,#22c55e,#15803d)' },
+    { label: 'Department', value: emp?.department?.name || '—', icon: 'building', grad: 'linear-gradient(135deg,#1e85d8,#0d5aa7)' },
+    { label: 'Designation', value: emp?.designation?.name || '—', icon: 'shield', grad: 'linear-gradient(135deg,#7c3aed,#4f46e5)' },
+    { label: 'Tenure', value: tenureLabel(emp?.joining_date), icon: 'clock', grad: 'linear-gradient(135deg,#06b6d4,#0891b2)' },
+  ];
+
   return (
     <div className="dash">
+      {/* Greeting */}
+      <div className="dash-welcome-row">
+        <div>
+          <h1 className="dash-hello">Welcome back, {firstName}!</h1>
+          <p className="dash-sub">Here's your personal workspace and offboarding status.</p>
+        </div>
+        <span className="date-chip"><Icon name="calendar" size={15} /> {today}</span>
+      </div>
+
       {/* Profile hero card with a decorative cover banner */}
       <div className="card emp-hero">
         <div className="emp-cover" />
+        <button className="btn btn-secondary emp-hero-edit" onClick={() => navigate('/profile')}>Edit Profile</button>
         <div className="emp-hero-body">
           <Avatar src={emp?.profile_photo} name={fullName} />
-          <div className="emp-hero-info">
-            <h1 className="emp-hero-name">{fullName}</h1>
-            <p className="emp-hero-role">{emp?.designation?.name || user?.role || '—'}{emp?.department?.name ? ` · ${emp.department.name}` : ''}</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              {emp && <span className={`badge badge-${emp.employment_status.toLowerCase()}`}>{emp.employment_status}</span>}
-              {emp?.employee_id && <span className="badge badge-secondary">{emp.employee_id}</span>}
+          <h2 className="emp-hero-name">{fullName}</h2>
+          <p className="emp-hero-role">
+            {emp?.designation?.name || user?.role || '—'}{emp?.department?.name ? ` · ${emp.department.name}` : ''}
+          </p>
+          <div className="emp-hero-badges">
+            {emp && (
+              <span className={`badge badge-${emp.employment_status.toLowerCase()}`}>
+                {emp.employment_status.charAt(0) + emp.employment_status.slice(1).toLowerCase()}
+              </span>
+            )}
+            {emp?.employee_id && <span className="badge badge-secondary">{emp.employee_id}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Stat tiles */}
+      <div className="emp-stats">
+        {tiles.map(t => (
+          <div className="dstat" key={t.label}>
+            <div className="dstat-icon" style={{ background: t.grad, color: '#fff' }}><Icon name={t.icon} size={22} /></div>
+            <div style={{ minWidth: 0 }}>
+              <div className="dstat-label">{t.label}</div>
+              <div className="emp-stat-value" title={t.value}>{t.value}</div>
             </div>
           </div>
-          <button className="btn btn-secondary" onClick={() => navigate('/profile')}>Edit Profile</button>
-        </div>
+        ))}
       </div>
 
       {/* Offboarding status (only if there is a request) */}
@@ -93,10 +142,10 @@ function EmployeeDashboard() {
       )}
 
       {/* Details + quick actions */}
-      <div className="dash-row dash-row-2">
+      <div className="emp-dash-row">
         <div className="card">
-          <h3 style={{ marginBottom: 14 }}>My Details</h3>
-          <dl className="info-list">
+          <h3 style={{ marginBottom: 16 }}>My Details</h3>
+          <dl className="emp-detail-grid">
             <div className="info-row"><dt className="info-label">Email</dt><dd className="info-value">{emp?.email || user?.email}</dd></div>
             <div className="info-row"><dt className="info-label">Phone</dt><dd className="info-value">{emp?.phone || '—'}</dd></div>
             <div className="info-row"><dt className="info-label">Department</dt><dd className="info-value">{emp?.department?.name || '—'}</dd></div>
@@ -107,10 +156,10 @@ function EmployeeDashboard() {
         </div>
 
         <div className="card">
-          <h3 style={{ marginBottom: 14 }}>Quick Actions</h3>
+          <h3 style={{ marginBottom: 16 }}>Quick Actions</h3>
           <div className="qa-grid">
             <button className="qa-btn qa-blue" onClick={() => navigate('/profile')}><Icon name="user" size={18} /> My Profile</button>
-            <button className="qa-btn qa-green" onClick={() => navigate('/my-knowledge-transfer')}><Icon name="book" size={18} /> My Knowledge Transfer</button>
+            <button className="qa-btn qa-green" onClick={() => navigate('/my-knowledge-transfer')}><Icon name="book" size={18} /> Knowledge Transfer</button>
             <button className="qa-btn qa-amber" onClick={() => navigate('/notifications')}><Icon name="bell" size={18} /> Notifications</button>
             {myRes
               ? <button className="qa-btn qa-rose" onClick={() => navigate(`/offboarding/${myRes.id}`)}><Icon name="clipboard" size={18} /> My Offboarding</button>

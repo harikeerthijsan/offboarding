@@ -124,9 +124,13 @@ export const clearanceService = {
 
   // Employee asset-return declaration
   submitAssetDeclaration: async (
-    offboardingId: number, notes?: string,
+    offboardingId: number,
+    notes?: string,
+    items?: { item: string; status: string }[],
   ): Promise<{ detail: string; asset_declaration_at: string; asset_declaration_notes: string }> => {
-    const { data } = await api.post(`/offboarding/${offboardingId}/asset-declaration/`, { notes: notes ?? '' });
+    const { data } = await api.post(`/offboarding/${offboardingId}/asset-declaration/`, {
+      notes: notes ?? '', items: items ?? [],
+    });
     return data;
   },
 };

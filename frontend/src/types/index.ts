@@ -432,6 +432,7 @@ export interface ClearanceSummary {
   asset_declaration_at: string | null;
   asset_declaration_by_name: string | null;
   asset_declaration_notes: string;
+  asset_declaration_items: { item: string; status: 'YES' | 'NO' | 'NA' }[];
 }
 
 // ─── Phase 7: Final Settlement & Exit Interview ──────────────────────────────

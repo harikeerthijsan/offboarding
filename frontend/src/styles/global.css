@@ -1808,23 +1808,31 @@ body {
 /* ═══════════════════════════════════════════════════════════════════════════
    Employee self-dashboard (profile hero + avatar)
    ═══════════════════════════════════════════════════════════════════════════ */
-.emp-hero { padding: 0; overflow: hidden; }
+.emp-hero { position: relative; padding: 0; overflow: hidden; }
 .emp-cover {
-  height: 120px;
+  height: 110px;
   background: linear-gradient(120deg, #1e85d8 0%, #4f46e5 45%, #06b6d4 100%);
   background-size: 220% 220%;
   animation: textFlow 9s ease infinite;
 }
+.emp-hero-edit {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(4px);
+}
 .emp-hero-body {
   display: flex;
-  align-items: flex-end;
-  gap: 18px;
-  padding: 0 24px 20px;
-  margin-top: -48px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px 24px;
+  margin-top: -52px;
 }
 .emp-avatar-img, .emp-avatar-fallback {
-  width: 96px; height: 96px;
+  width: 104px; height: 104px;
   border-radius: 50%;
   border: 4px solid var(--surface);
   box-shadow: var(--shadow-md);
@@ -1837,8 +1845,73 @@ body {
   font-weight: 700; color: #fff;
   background: linear-gradient(135deg, #1e85d8, #4f46e5);
 }
-.emp-hero-info { flex: 1; min-width: 180px; padding-bottom: 4px; }
-.emp-hero-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
-.emp-hero-role { color: var(--text-secondary); font-size: 14px; margin-top: 2px; }
+.emp-hero-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin-top: 14px; }
+.emp-hero-role { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+.emp-hero-badges { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
 .badge-secondary { background: #eef1f6; color: #475569; }
-.emp-hero-body .btn { margin-bottom: 4px; }
+
+/* Stat tiles */
+.emp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.emp-stat-value {
+  font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text);
+  line-height: 1.2; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Details + actions row: balanced two-up */
+.emp-dash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.emp-dash-row > .card { height: 100%; }
+
+/* My Details: two-column key/value grid */
+.emp-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+
+@media (max-width: 1000px) {
+  .emp-stats { grid-template-columns: repeat(2, 1fr); }
+  .emp-dash-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .emp-stats, .emp-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* Asset declaration — per-item Yes / No / N/A selector */
+.decl-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.decl-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.decl-row:last-child { border-bottom: none; }
+.decl-row:nth-child(even) { background: var(--surface-2); }
+.decl-row-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.decl-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.decl-seg-btn {
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-right: 1px solid var(--border);
+  transition: background 0.12s, color 0.12s;
+}
+.decl-seg-btn:last-child { border-right: none; }
+.decl-seg-btn:hover { background: var(--surface-2); }
+.decl-seg-btn.active.yes { background: #16a34a; color: #fff; }
+.decl-seg-btn.active.no  { background: #dc2626; color: #fff; }
+.decl-seg-btn.active.na  { background: #64748b; color: #fff; }
+@media (max-width: 480px) {
+  .decl-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+}

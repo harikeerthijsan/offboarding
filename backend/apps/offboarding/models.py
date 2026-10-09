@@ -153,6 +153,8 @@ class ResignationRequest(models.Model):
         related_name='asset_declarations',
     )
     asset_declaration_notes = models.TextField(blank=True)
+    # The specific items the employee ticked as returned (e.g. ["Laptop", "Mouse"]).
+    asset_declaration_items = models.JSONField(default=list, blank=True)
 
     # Phase 8: Final HR review & approval. This is a distinct review layer on top
     # of the resignation status machine — it never auto-marks the employee EXITED

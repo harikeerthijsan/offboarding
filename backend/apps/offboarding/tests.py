@@ -2555,6 +2555,32 @@ class AssetDeclarationTest(ClearanceSetup):
         self.assertEqual(res.asset_declaration_by, self.employee_user)
         self.assertEqual(res.asset_declaration_notes, 'Returned laptop and ID card.')
 
+    def test_declaration_records_item_statuses(self):
+        auth(self.client, self.employee_user)
+        items = [
+            {'item': 'Laptop', 'status': 'YES'},
+            {'item': 'Mouse', 'status': 'NO'},
+            {'item': 'SIM Card', 'status': 'NA'},
+        ]
+        r = self.client.post(self._url(), {'items': items, 'notes': ''}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        res = ResignationRequest.objects.get(pk=self.rid)
+        self.assertEqual(res.asset_declaration_items, items)
+        # and the items surface in the clearance summary
+        s = self.client.get(f'/api/offboarding/{self.rid}/clearance/summary/')
+        self.assertEqual(s.data['asset_declaration_items'], items)
+
+    def test_invalid_item_status_rejected(self):
+        auth(self.client, self.employee_user)
+        r = self.client.post(self._url(),
+                             {'items': [{'item': 'Laptop', 'status': 'MAYBE'}]}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_items_bad_type_rejected(self):
+        auth(self.client, self.employee_user)
+        r = self.client.post(self._url(), {'items': 'laptop'}, format='json')  # not a list
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_notes_are_optional(self):
         auth(self.client, self.employee_user)
         r = self.client.post(self._url(), {}, format='json')

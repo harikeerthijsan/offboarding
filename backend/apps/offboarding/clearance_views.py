@@ -618,6 +618,7 @@ class ClearanceSummaryView(APIView):
             'asset_declaration_at': resignation.asset_declaration_at,
             'asset_declaration_by_name': decl_by_name,
             'asset_declaration_notes': resignation.asset_declaration_notes,
+            'asset_declaration_items': resignation.asset_declaration_items or [],
         })
 
 
@@ -650,14 +651,34 @@ class AssetDeclarationView(APIView):
                                 status=status.HTTP_400_BAD_REQUEST)
 
             notes = (request.data.get('notes') or '').strip()
+            raw_items = request.data.get('items') or []
+            if not isinstance(raw_items, list):
+                return Response({'items': 'Expected a list of declared items.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            allowed = {'YES', 'NO', 'NA'}
+            items = []
+            for it in raw_items:
+                if not isinstance(it, dict):
+                    return Response({'items': 'Each item must be an {item, status} object.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                name = str(it.get('item', '')).strip()
+                st = str(it.get('status', '')).strip().upper()
+                if not name:
+                    continue
+                if st not in allowed:
+                    return Response({'items': f'Invalid status "{st}" for "{name}". Use YES, NO or NA.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                items.append({'item': name, 'status': st})
             resignation.asset_declaration_at = timezone.now()
             resignation.asset_declaration_by = request.user
             resignation.asset_declaration_notes = notes
+            resignation.asset_declaration_items = items
             resignation.save(update_fields=[
-                'asset_declaration_at', 'asset_declaration_by', 'asset_declaration_notes', 'updated_at',
+                'asset_declaration_at', 'asset_declaration_by', 'asset_declaration_notes',
+                'asset_declaration_items', 'updated_at',
             ])
             log_action(actor=request.user, action='ASSET_DECLARATION_SUBMITTED', target_obj=resignation,
-                       changes={'notes': notes}, request=request)
+                       changes={'notes': notes, 'items': items}, request=request)
 
             # The declaration unlocks the IT asset clearance.
             _create_it_asset_clearance(resignation)

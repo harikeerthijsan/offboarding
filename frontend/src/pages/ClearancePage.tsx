@@ -16,6 +16,12 @@ import Icon from '../components/Icon';
 
 type Tab = 'departments' | 'assets';
 
+// Common company assets an employee may be asked to return.
+const ASSET_ITEMS = [
+  'Laptop', 'Charger / Adapter', 'Mouse', 'Keyboard', 'Monitor', 'Headset',
+  'Mobile Phone', 'SIM Card', 'ID Card', 'Access Card', 'Other',
+];
+
 export default function ClearancePage() {
   const { id } = useParams<{ id: string }>();
   const oid = Number(id);
@@ -58,6 +64,7 @@ export default function ClearancePage() {
   // employee asset declaration
   const [declConfirmed, setDeclConfirmed] = useState(false);
   const [declNotes, setDeclNotes] = useState('');
+  const [declStatus, setDeclStatus] = useState<Record<string, 'YES' | 'NO' | 'NA'>>({});
 
   const load = useCallback(async () => {
     const [sum, d, ac] = await Promise.all([
@@ -194,13 +201,20 @@ export default function ClearancePage() {
     }
   }
 
+  function setItemStatus(item: string, status: 'YES' | 'NO' | 'NA') {
+    setDeclStatus(prev => ({ ...prev, [item]: status }));
+  }
+
   async function handleSubmitDeclaration() {
     setBusy(true); setActionError('');
     try {
-      await clearanceService.submitAssetDeclaration(oid, declNotes);
+      // Every asset gets a status; unselected defaults to NA.
+      const items = ASSET_ITEMS.map(item => ({ item, status: declStatus[item] || 'NA' }));
+      await clearanceService.submitAssetDeclaration(oid, declNotes, items);
       setMsg('Your asset return declaration has been submitted.');
       setDeclConfirmed(false);
       setDeclNotes('');
+      setDeclStatus({});
       await refresh();
     } catch (err) {
       setActionError(ktErrorMessage(err, 'Failed to submit declaration.'));
@@ -253,6 +267,15 @@ export default function ClearancePage() {
               declared that all company assets have been returned on {formatDate(summary.asset_declaration_at)}.
               IT asset clearance is now in progress below.
             </div>
+            {summary.asset_declaration_items && summary.asset_declaration_items.length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {summary.asset_declaration_items.map(({ item, status }) => {
+                  const cls = status === 'YES' ? 'badge-active' : status === 'NO' ? 'badge-exited' : 'badge-secondary';
+                  const label = status === 'YES' ? '✓' : status === 'NO' ? '✗' : '–';
+                  return <span key={item} className={`badge ${cls}`}>{label} {item}{status === 'NA' ? ' (N/A)' : ''}</span>;
+                })}
+              </div>
+            )}
             {summary.asset_declaration_notes && (
               <div style={{ marginTop: 8, fontSize: 14, whiteSpace: 'pre-wrap' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Note: </span>{summary.asset_declaration_notes}
@@ -266,7 +289,32 @@ export default function ClearancePage() {
               (laptop, ID card, access card, devices, etc.). Once you submit this declaration, IT will begin
               the asset clearance.
             </p>
-            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 12 }}>
+            <div className="form-group">
+              <label className="form-label">Asset return status <span style={{ color: 'var(--text-muted)' }}>(mark each — Yes returned, No not returned, N/A not applicable)</span></label>
+              <div className="decl-list">
+                {ASSET_ITEMS.map(item => {
+                  const val = declStatus[item];
+                  return (
+                    <div key={item} className="decl-row">
+                      <span className="decl-row-name">{item}</span>
+                      <div className="decl-seg">
+                        {(['YES', 'NO', 'NA'] as const).map(opt => (
+                          <button
+                            type="button"
+                            key={opt}
+                            className={`decl-seg-btn${val === opt ? ` active ${opt.toLowerCase()}` : ''}`}
+                            onClick={() => setItemStatus(item, opt)}
+                          >
+                            {opt === 'NA' ? 'N/A' : opt.charAt(0) + opt.slice(1).toLowerCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', margin: '14px 0 12px' }}>
               <input type="checkbox" checked={declConfirmed} onChange={e => setDeclConfirmed(e.target.checked)} style={{ marginTop: 3 }} />
               <span style={{ fontSize: 14 }}>
                 I declare that I have returned/submitted all company assets assigned to me, and that I have
