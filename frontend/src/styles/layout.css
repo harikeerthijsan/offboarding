@@ -96,6 +96,21 @@
   flex-shrink: 0;
 }
 
+/* Nested sub-item (e.g. Knowledge Transfer under Resignation) */
+.nav-sublink {
+  margin-left: 18px;
+  padding-left: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-left: 1.5px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.nav-sublink .nav-icon { width: 16px; }
+.nav-sublink.active {
+  border-left-color: var(--primary);
+}
+.nav-sublink.active::before { display: none; }
+
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid var(--border);

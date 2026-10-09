@@ -209,10 +209,25 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         ei_map = {ei.employee_id: ei.get_status_display()
                   for ei in ExitInterview.objects.all()}
 
-        # employee_id -> most recent offboarding request
+        # employee_id -> most recent offboarding request (with notice period prefetched)
         latest_offboarding = {}
-        for r in ResignationRequest.objects.filter(employee__in=qs).order_by('employee_id', '-created_at'):
+        for r in (ResignationRequest.objects
+                  .filter(employee__in=qs)
+                  .select_related('notice_period')
+                  .order_by('employee_id', '-created_at')):
             latest_offboarding.setdefault(r.employee_id, r)
+
+        def exit_date(employee):
+            """Best available last-working-day for the employee's latest offboarding:
+            actual > expected (notice period) > resignation's last working date."""
+            off = latest_offboarding.get(employee.id)
+            if not off:
+                return ''
+            np = getattr(off, 'notice_period', None)
+            d = (getattr(np, 'actual_last_working_day', None)
+                 or getattr(np, 'expected_last_working_day', None)
+                 or off.last_working_date)
+            return d.isoformat() if d else ''
 
         # offboarding_id -> {department: status display}
         res_ids = [r.id for r in latest_offboarding.values()]
@@ -241,7 +256,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="employees_{status_label}.csv"'
         writer = csv.writer(response)
         writer.writerow(['Employee ID', 'Name', 'Email', 'Department', 'Designation',
-                         'Manager', 'Status', 'Joining Date', 'Exit Interview',
+                         'Manager', 'Status', 'Joining Date', 'Exit Date', 'Exit Interview',
                          'Knowledge Transfer', 'IT Clearance', 'Finance Clearance',
                          'HR Clearance', 'Admin Clearance', 'Manager Clearance',
                          'Overall Clearance'])
@@ -255,6 +270,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 f"{e.manager.first_name} {e.manager.last_name}".strip() if e.manager else '',
                 e.get_employment_status_display(),
                 e.joining_date.isoformat() if e.joining_date else '',
+                exit_date(e),
                 ei_map.get(e.id, 'Not Started'),
                 *clearance_cells(e),
             ])

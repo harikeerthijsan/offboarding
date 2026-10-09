@@ -375,7 +375,7 @@ class EmployeeTest(BaseTestCase):
         self.assertIn('pan_number', response.data)
 
     def test_export_includes_clearance_columns(self):
-        from apps.offboarding.models import ResignationRequest, DepartmentClearance
+        from apps.offboarding.models import ResignationRequest, NoticePeriod, DepartmentClearance
         emp = self._create_employee(self.employee_user, 'EMP700')
         emp.employment_status = 'EXITED'
         emp.save(update_fields=['employment_status'])
@@ -384,6 +384,7 @@ class EmployeeTest(BaseTestCase):
             employee=emp, reason='PERSONAL_REASONS', resignation_date='2026-01-01',
             status='COMPLETED', kt_completed_at=timezone.now(), clearance_completed_at=timezone.now(),
         )
+        NoticePeriod.objects.create(resignation=off, actual_last_working_day='2026-03-15')
         DepartmentClearance.objects.create(offboarding_request=off, department='IT', status='CLEARED')
         DepartmentClearance.objects.create(offboarding_request=off, department='FINANCE', status='CLEARED')
 
@@ -393,12 +394,13 @@ class EmployeeTest(BaseTestCase):
         self.assertIn('text/csv', response['Content-Type'])
         body = response.content.decode('utf-8')
         # Headers present
-        for header in ['Knowledge Transfer', 'IT Clearance', 'Finance Clearance', 'Overall Clearance']:
+        for header in ['Exit Date', 'Knowledge Transfer', 'IT Clearance', 'Finance Clearance', 'Overall Clearance']:
             self.assertIn(header, body)
-        # The EMP700 row reflects cleared/completed statuses
+        # The EMP700 row reflects cleared/completed statuses and the exit date
         row = [line for line in body.splitlines() if line.startswith('EMP700')][0]
         self.assertIn('Cleared', row)
         self.assertIn('Completed', row)
+        self.assertIn('2026-03-15', row)
 
     def test_employee_cannot_create_employee(self):
         self.auth(self.employee_user)

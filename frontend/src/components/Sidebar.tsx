@@ -8,6 +8,7 @@ interface NavItem {
   label: string;
   icon: IconName;
   roles: UserRole[];
+  children?: NavItem[];
 }
 
 const ALL_NAV_ITEMS: NavItem[] = [
@@ -34,18 +35,20 @@ const ALL_NAV_ITEMS: NavItem[] = [
     label: 'Resignation',
     icon: 'clipboard',
     roles: ['EMPLOYEE', 'MANAGER', 'HR', 'ADMIN'],
+    children: [
+      {
+        path: '/my-knowledge-transfer',
+        label: 'Knowledge Transfer',
+        icon: 'refresh',
+        roles: ['EMPLOYEE', 'MANAGER', 'HR', 'ADMIN'],
+      },
+    ],
   },
   {
     path: '/hr/offboarding',
     label: 'HR Dashboard',
     icon: 'bar-chart',
     roles: ['HR', 'ADMIN'],
-  },
-  {
-    path: '/my-knowledge-transfer',
-    label: 'My Knowledge Transfer',
-    icon: 'refresh',
-    roles: ['EMPLOYEE', 'MANAGER', 'HR', 'ADMIN'],
   },
   {
     path: '/clearances',
@@ -105,16 +108,30 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         <div className="nav-section-label">Navigation</div>
-        {visibleItems.map(item => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-          >
-            <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+        {visibleItems.map(item => {
+          const children = (item.children || []).filter(c => user && c.roles.includes(user.role));
+          return (
+            <div key={item.path}>
+              <NavLink
+                to={item.path}
+                className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+              >
+                <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
+                <span>{item.label}</span>
+              </NavLink>
+              {children.map(child => (
+                <NavLink
+                  key={child.path}
+                  to={child.path}
+                  className={({ isActive }) => `nav-link nav-sublink${isActive ? ' active' : ''}`}
+                >
+                  <span className="nav-icon"><Icon name={child.icon} size={16} /></span>
+                  <span>{child.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          );
+        })}
       </nav>
 
       {user && (

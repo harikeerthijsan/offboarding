@@ -1804,3 +1804,41 @@ body {
   0%   { transform: translateX(-100%); }
   60%, 100% { transform: translateX(100%); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Employee self-dashboard (profile hero + avatar)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.emp-hero { padding: 0; overflow: hidden; }
+.emp-cover {
+  height: 120px;
+  background: linear-gradient(120deg, #1e85d8 0%, #4f46e5 45%, #06b6d4 100%);
+  background-size: 220% 220%;
+  animation: textFlow 9s ease infinite;
+}
+.emp-hero-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 0 24px 20px;
+  margin-top: -48px;
+  flex-wrap: wrap;
+}
+.emp-avatar-img, .emp-avatar-fallback {
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  border: 4px solid var(--surface);
+  box-shadow: var(--shadow-md);
+  background: var(--surface-2);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.emp-avatar-fallback {
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #1e85d8, #4f46e5);
+}
+.emp-hero-info { flex: 1; min-width: 180px; padding-bottom: 4px; }
+.emp-hero-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+.emp-hero-role { color: var(--text-secondary); font-size: 14px; margin-top: 2px; }
+.badge-secondary { background: #eef1f6; color: #475569; }
+.emp-hero-body .btn { margin-bottom: 4px; }

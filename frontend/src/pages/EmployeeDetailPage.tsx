@@ -64,6 +64,8 @@ export default function EmployeeDetailPage() {
 
   const fullName = `${employee.first_name} ${employee.last_name}`;
   const initials = `${employee.first_name[0]}${employee.last_name[0]}`.toUpperCase();
+  // For exited employees, show only core employee information (Personal + Employment).
+  const isExited = employee.employment_status === 'EXITED';
 
   return (
     <div className="employee-detail">
@@ -116,16 +118,18 @@ export default function EmployeeDetailPage() {
         </div>
 
         {/* Emergency Contact */}
-        <div className="card">
-          <h3 className="section-title">Emergency Contact</h3>
-          <dl className="info-list">
-            <InfoRow label="Contact Name" value={employee.emergency_contact_name} />
-            <InfoRow label="Contact Phone" value={employee.emergency_contact_phone} />
-          </dl>
-        </div>
+        {!isExited && (
+          <div className="card">
+            <h3 className="section-title">Emergency Contact</h3>
+            <dl className="info-list">
+              <InfoRow label="Contact Name" value={employee.emergency_contact_name} />
+              <InfoRow label="Contact Phone" value={employee.emergency_contact_phone} />
+            </dl>
+          </div>
+        )}
 
         {/* Statutory Details — HR/Admin only */}
-        {canManage && (
+        {!isExited && canManage && (
           <div className="card">
             <h3 className="section-title">Statutory Details</h3>
             <dl className="info-list">
@@ -138,7 +142,7 @@ export default function EmployeeDetailPage() {
         )}
 
         {/* Bank Details — HR/Admin only */}
-        {canManage && (
+        {!isExited && canManage && (
           <div className="card">
             <h3 className="section-title">Bank Details</h3>
             <dl className="info-list">
@@ -151,20 +155,22 @@ export default function EmployeeDetailPage() {
         )}
 
         {/* System Info */}
-        <div className="card">
-          <h3 className="section-title">System Information</h3>
-          <dl className="info-list">
-            <InfoRow label="User Role" value={employee.user?.role} />
-            <InfoRow label="User Email" value={employee.user?.email} />
-            <InfoRow label="Direct Reports" value={String(employee.direct_reports_count)} />
-            <InfoRow label="Record Created" value={formatDate(employee.created_at)} />
-            <InfoRow label="Last Updated" value={formatDate(employee.updated_at)} />
-          </dl>
-        </div>
+        {!isExited && (
+          <div className="card">
+            <h3 className="section-title">System Information</h3>
+            <dl className="info-list">
+              <InfoRow label="User Role" value={employee.user?.role} />
+              <InfoRow label="User Email" value={employee.user?.email} />
+              <InfoRow label="Direct Reports" value={String(employee.direct_reports_count)} />
+              <InfoRow label="Record Created" value={formatDate(employee.created_at)} />
+              <InfoRow label="Last Updated" value={formatDate(employee.updated_at)} />
+            </dl>
+          </div>
+        )}
       </div>
 
       {/* Direct Reports */}
-      {reports.length > 0 && (
+      {!isExited && reports.length > 0 && (
         <div className="card" style={{ marginTop: 16 }}>
           <h3 className="section-title">Direct Reports ({reports.length})</h3>
           <div style={{ overflowX: 'auto' }}>
