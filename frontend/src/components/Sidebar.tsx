@@ -68,12 +68,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
     icon: 'bell',
     roles: ['EMPLOYEE', 'MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
   },
-  {
-    path: '/profile',
-    label: 'My Profile',
-    icon: 'user',
-    roles: ['EMPLOYEE', 'MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
-  },
 ];
 
 function getRoleBadgeClass(role: UserRole): string {
