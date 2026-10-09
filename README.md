@@ -137,6 +137,16 @@ File: `backend/.env`
 | `DB_HOST` | PostgreSQL host | `localhost` |
 | `DB_PORT` | PostgreSQL port | `5432` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated frontend origins | `http://localhost:5173` |
+| `FRONTEND_URL` | Public frontend URL, used for "View in app" links in emails | `http://localhost:5173` |
+| `EMAIL_BACKEND` | Django email backend | `…console.EmailBackend` (dev) |
+| `EMAIL_HOST` | SMTP server host | — |
+| `EMAIL_PORT` | SMTP port | `587` |
+| `EMAIL_USE_TLS` | Use STARTTLS | `True` |
+| `EMAIL_HOST_USER` | SMTP username (sending mailbox) | — |
+| `EMAIL_HOST_PASSWORD` | SMTP / app password | — |
+| `EMAIL_TIMEOUT` | SMTP connection timeout (seconds) | `10` |
+| `DEFAULT_FROM_EMAIL` | From address on outgoing mail | `offboarding@jsanconsulting.com` |
+| `NOTIFICATION_EMAILS_ENABLED` | Mirror every in-app notification to email | `True` |
 
 ---
 
@@ -307,6 +317,46 @@ npm install
 npm run build            # outputs dist/
 # Serve dist/ via Nginx or any static host; proxy /api/* to the backend.
 ```
+
+### Email / SMTP setup (notifications)
+
+Every in-app notification (resignation, notice period, knowledge transfer, clearance,
+asset declaration, settlement, exit interview, final review, documents) is **also
+emailed** to the recipient. In development the console backend prints emails to the
+server log; for production you must configure a real SMTP server so mail is delivered.
+
+Set these environment variables (in `backend/.env` or your host's variables, e.g.
+Railway → backend service → **Variables**):
+
+```bash
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.yourprovider.com          # see provider hosts below
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=offboarding@jsanconsulting.com   # a real, sendable mailbox
+EMAIL_HOST_PASSWORD=your-smtp-or-app-password
+EMAIL_TIMEOUT=10
+DEFAULT_FROM_EMAIL=offboarding@jsanconsulting.com
+FRONTEND_URL=https://your-frontend-domain         # for "View in app" links
+NOTIFICATION_EMAILS_ENABLED=True
+```
+
+**Provider SMTP hosts:**
+
+| Provider | `EMAIL_HOST` | Port | Notes |
+|----------|--------------|------|-------|
+| Google Workspace | `smtp.gmail.com` | 587 | Requires an **App Password** (2-Step Verification on) |
+| Microsoft 365 | `smtp.office365.com` | 587 | SMTP AUTH must be enabled for the mailbox |
+| Company mail server | `mail.yourdomain.com` | 587 (or 465 w/ SSL) | Ask your IT team for the exact host |
+
+Notes:
+- The sending mailbox (`EMAIL_HOST_USER`) must exist and be allowed to authenticate via SMTP.
+- `DEFAULT_FROM_EMAIL` should match (or be an alias of) the authenticated mailbox to avoid spam filtering.
+- Delivery against a real SMTP server runs in a background thread (non-blocking) and is
+  bounded by `EMAIL_TIMEOUT`; failures are logged and never break the request.
+- To turn off email mirroring entirely, set `NOTIFICATION_EMAILS_ENABLED=False`
+  (in-app notifications still work).
+- Verify from a shell: `python manage.py shell -c "from django.core.mail import send_mail; send_mail('Test','hello','offboarding@jsanconsulting.com',['you@yourdomain.com'])"`
 
 ---
 
