@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
@@ -40,7 +41,10 @@ def _notify(recipient_user, notification_type, title, message, obj):
             related_object_type='ResignationRequest',
             related_object_id=obj.pk,
         )
-        send_notification_email(recipient_user, title, message)
+        link = None
+        if settings.FRONTEND_URL:
+            link = f"{settings.FRONTEND_URL}/offboarding/{obj.pk}"
+        send_notification_email(recipient_user, title, message, link=link)
 
 
 _UNSET = object()

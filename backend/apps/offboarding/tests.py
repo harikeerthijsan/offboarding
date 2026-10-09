@@ -493,6 +493,22 @@ class NotificationTests(ResignationWorkflowSetup):
         recipients = [addr for m in mail.outbox for addr in m.to]
         self.assertIn(self.manager_user.email, recipients)
         self.assertTrue(mail.outbox[0].subject.startswith('[Offboarding]'))
+        # Production email is multipart: plain text + branded HTML alternative.
+        msg = mail.outbox[0]
+        self.assertTrue(msg.alternatives)
+        html, mime = msg.alternatives[0]
+        self.assertEqual(mime, 'text/html')
+        self.assertIn('Offboarding Management', html)
+
+    @override_settings(FRONTEND_URL='https://app.example.com')
+    def test_email_includes_action_link_when_frontend_url_set(self):
+        auth(self.client, self.employee_user)
+        r = self.client.post('/api/offboarding/', self.valid_payload, format='json')
+        rid = r.data['id']
+        mail.outbox = []
+        self.client.post(f'/api/offboarding/{rid}/submit/')
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertIn(f'https://app.example.com/offboarding/{rid}', html)
 
     @override_settings(NOTIFICATION_EMAILS_ENABLED=False)
     def test_emails_can_be_disabled(self):

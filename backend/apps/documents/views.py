@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import FileResponse, Http404
@@ -45,7 +46,10 @@ def _notify_doc(recipient_user, ntype, title, message, doc):
             related_object_type='OffboardingDocument', related_object_id=doc.pk,
             related_offboarding=doc.offboarding_request,
         )
-        send_notification_email(recipient_user, title, message)
+        link = None
+        if getattr(settings, 'FRONTEND_URL', ''):
+            link = f"{settings.FRONTEND_URL}/offboarding/{doc.offboarding_request_id}/documents"
+        send_notification_email(recipient_user, title, message, link=link)
 
 
 def _can_generate(resignation, user, document_type):

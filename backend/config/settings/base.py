@@ -158,9 +158,13 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+# Bound SMTP connection time so a slow/hung mail server can't stall workers.
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='offboarding@jsanconsulting.com')
 # When True, every in-app notification is also emailed to the recipient.
 NOTIFICATION_EMAILS_ENABLED = config('NOTIFICATION_EMAILS_ENABLED', default=True, cast=bool)
+# Public URL of the frontend, used to build action links in emails (no trailing slash).
+FRONTEND_URL = config('FRONTEND_URL', default='').rstrip('/')
 # How many days before the last working day to send the exit reminder.
 EXIT_REMINDER_DAYS = config('EXIT_REMINDER_DAYS', default=7, cast=int)
 
