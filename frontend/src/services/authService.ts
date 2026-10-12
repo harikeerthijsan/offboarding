@@ -44,4 +44,10 @@ export const authService = {
     });
     return data;
   },
+
+  // Mint a one-time SSO handoff token and return where to send the browser.
+  skillHubSSO: async (): Promise<{ token: string; redirect_url: string }> => {
+    const { data } = await api.get<{ token: string; redirect_url: string }>('/auth/sso/skillhub/');
+    return data;
+  },
 };

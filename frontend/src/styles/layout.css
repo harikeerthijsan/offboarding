@@ -111,6 +111,18 @@
 }
 .nav-sublink.active::before { display: none; }
 
+/* External app link (Skills Hub SSO) — looks like a nav-link but is a button */
+.nav-link-external {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.nav-link-external:disabled { opacity: 0.6; cursor: default; }
+.nav-external-mark { margin-left: auto; color: var(--text-muted); font-size: 13px; }
+
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid var(--border);

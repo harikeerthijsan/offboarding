@@ -22,5 +22,6 @@ urlpatterns = [
     path('api/', include('apps.offboarding.clearance_urls')),
     path('api/exit-interviews/analytics/', ExitInterviewAnalyticsView.as_view(), name='exit-interview-analytics'),
     path('api/', include('apps.documents.urls')),
+    path('api/policies/', include('apps.policies.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
 ]

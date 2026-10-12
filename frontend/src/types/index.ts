@@ -664,6 +664,21 @@ export interface NotificationItem {
   read_at: string | null;
 }
 
+export interface Policy {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  category_display: string;
+  is_active: boolean;
+  uploaded_by_name: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  download_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EmployeeFilters {
   search?: string;
   department?: number | string;

@@ -25,6 +25,7 @@ import DocumentsPage from './pages/DocumentsPage';
 import NotificationCenterPage from './pages/NotificationCenterPage';
 import OffboardingRequestsPage from './pages/OffboardingRequestsPage';
 import ProfilePage from './pages/ProfilePage';
+import PoliciesPage from './pages/PoliciesPage';
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
               <Route path="/my-knowledge-transfer" element={<MyKnowledgeTransferPage />} />
               <Route path="/assets" element={<AssetsPage />} />
               <Route path="/clearances" element={<ClearanceQueuePage />} />
+              <Route path="/policies" element={<PoliciesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

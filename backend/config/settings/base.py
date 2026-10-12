@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.audit',
     'apps.documents',
+    'apps.policies',
 ]
 
 MIDDLEWARE = [
@@ -165,6 +166,14 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='offboarding@jsanconsu
 NOTIFICATION_EMAILS_ENABLED = config('NOTIFICATION_EMAILS_ENABLED', default=True, cast=bool)
 # Public URL of the frontend, used to build action links in emails (no trailing slash).
 FRONTEND_URL = config('FRONTEND_URL', default='').rstrip('/')
+
+# ─── SSO to JSAN Skills Hub ──────────────────────────────────────────────────
+# Shared secret used ONLY to sign the short-lived SSO handoff token (independent
+# of SECRET_KEY / SimpleJWT). Must match SSO_SHARED_SECRET in the Skills Hub app.
+SSO_SHARED_SECRET = config('SSO_SHARED_SECRET', default='')
+# Where the Skills Hub consumes the handoff token (no trailing slash).
+# Single-domain path mount example: https://app.jsanpeople360.com/skills
+SKILLHUB_SSO_URL = config('SKILLHUB_SSO_URL', default='').rstrip('/')
 # How many days before the last working day to send the exit reminder.
 EXIT_REMINDER_DAYS = config('EXIT_REMINDER_DAYS', default=7, cast=int)
 

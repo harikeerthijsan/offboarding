@@ -1,0 +1,121 @@
+/* Scoped presentation for /dashboard; existing layouts and values stay intact. */
+.dash-motion { position: relative; isolation: isolate; }
+.app-shell:has(.dash-motion) { --sidebar-width: 228px; background: #eaf0ff; }
+.app-shell:has(.dash-motion) .sidebar {
+  background: radial-gradient(ellipse at 10% 85%, rgba(111,155,255,.35), transparent 50%), linear-gradient(160deg, #f8faff, #e8edff);
+  border-right: 1px solid #dbe4fc;
+}
+.app-shell:has(.dash-motion) .nav-link.active { color: #fff; background: linear-gradient(110deg, #299cff, #7250fa, #c575ee); box-shadow: 0 4px 16px #869df555; }
+.app-shell:has(.dash-motion) .header { background: rgba(245,248,255,.9); }
+.app-shell:has(.dash-motion) .page-content { padding: 20px; }
+.dash-motion { gap: 16px; }
+.dash-motion .dash-welcome-row {
+  background: linear-gradient(90deg, #edf3ff 5%, rgba(237,243,255,.65) 45%, transparent 75%), url('/dashboard-office.png') center 48% / cover;
+  min-height: 192px; align-items: flex-start; padding: 28px 24px;
+}
+.dash-motion .dash-hello { font-size: clamp(28px, 3vw, 42px); max-width: 600px; }
+.dash-motion .dash-welcome-actions { margin-left: auto; }
+.dash-motion .dstat { padding: 16px; gap: 12px; }
+.dash-motion .dstat-value { font-size: 30px; }
+.dash-motion .dstat-trend { flex-wrap: wrap; gap: 4px; font-size: 11px; }
+.dash-motion .dstat-trend span { font-size: 10px; }
+.dash-motion .dash-row > .card { padding: 20px; }
+.dash-motion .card h3 { font-size: 17px; }
+.dash-reference-pipeline { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.dash-reference-stage { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; border-radius: 14px; padding: 12px 6px; background: linear-gradient(180deg, color-mix(in srgb, currentColor 9%, white), #fff); }
+.dash-stage-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: color-mix(in srgb, currentColor 12%, white); }
+.dash-stage-label { color: #18305d; font-size: 11px; font-weight: 600; min-height: 30px; }
+.dash-reference-stage strong { font-size: 27px; line-height: 1; }
+.dash-stage-caption { font-size: 10px; color: #63749a; }
+@media (max-width: 1100px) { .dash-reference-pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 620px) {
+  .dash-reference-pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-motion .dash-welcome-row { background: #edf3ff; }
+}
+.dash-motion > :not(.dash-atmosphere) { position: relative; z-index: 1; min-width: 0; }
+.dash-atmosphere { position: absolute; inset: -16px; overflow: hidden; border-radius: 24px; pointer-events: none; z-index: -1; }
+.dash-aurora {
+  position: absolute; inset: -5%;
+  background: radial-gradient(ellipse at 15% 12%, #dceaff 0%, transparent 52%), radial-gradient(ellipse at 90% 40%, #ede4ff 0%, transparent 55%), radial-gradient(ellipse at 40% 95%, #ddf6ff 0%, transparent 48%);
+  opacity: .8;
+  animation: dashboard-glow 22s ease-in-out infinite alternate;
+}
+.dash-wave {
+  position: absolute; width: 85%; height: 240px; top: 10%; left: 12%;
+  border: 1px solid rgba(111, 145, 236, .13); border-radius: 50%;
+  box-shadow: 0 12px 0 rgba(117, 139, 230, .035), 0 26px 0 rgba(117, 139, 230, .025);
+  transform: translate(var(--motion-x, 0px), var(--motion-y, 0px)) rotate(-16deg);
+}
+.dash-light { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #b3ccff; opacity: .45; animation: dashboard-float 12s ease-in-out infinite; }
+.dash-light-one { top: 8%; left: 42%; }
+.dash-light-two { top: 48%; right: 3%; background: #c9b4ef; animation-delay: -4s; }
+.dash-light-three { bottom: 8%; left: 12%; background: #98dced; animation-delay: -8s; }
+.dash-ribbons {
+  position: absolute; inset: 0; width: 100%; height: 600px;
+  transform: translate(var(--motion-x, 0px), var(--motion-y, 0px));
+  animation: dashboard-ribbon-drift 16s ease-in-out infinite alternate;
+}
+.dash-motion .dash-welcome-row {
+  padding: 28px 24px; min-height: 192px; align-items: flex-start;
+  border-radius: 20px; border: 1px solid rgba(255,255,255,.8);
+  background: linear-gradient(90deg, #edf3ff 5%, rgba(237,243,255,.65) 45%, transparent 75%), url('/dashboard-office.png') center 48% / cover;
+  box-shadow: 0 10px 32px -20px rgba(56,86,164,.3);
+}
+.dash-motion .dash-hello { color: #163b79; letter-spacing: -.035em; }
+.dash-motion .card, .dash-motion .dstat {
+  position: relative; isolation: isolate;
+  background: linear-gradient(145deg, rgba(255,255,255,.91), rgba(247,250,255,.85));
+  backdrop-filter: blur(8px);
+  border: 1px solid #dce6f6;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px -16px rgba(41,77,146,.24), inset 0 1px 0 #fff;
+  transition: box-shadow .22s ease, border-color .22s ease, transform .22s ease;
+  animation: dashboard-enter .55s ease backwards;
+}
+.dash-motion .card::before, .dash-motion .dstat::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: -1;
+  pointer-events: none; opacity: var(--glow-opacity, 0);
+  background: radial-gradient(240px circle at var(--glow-x, 50%) var(--glow-y, 0%), rgba(107,149,255,.10), transparent 75%);
+  transition: opacity .25s ease;
+}
+.dash-motion .dstat:nth-child(2), .dash-motion .dash-row > .card:nth-child(2) { animation-delay: .07s; }
+.dash-motion .dstat:nth-child(3), .dash-motion .dash-row > .card:nth-child(3) { animation-delay: .14s; }
+.dash-motion .dstat:nth-child(4) { animation-delay: .21s; }
+.dash-motion .dstat:nth-child(5) { animation-delay: .28s; }
+.dash-motion .dstat-icon { border-radius: 14px; }
+.dash-motion .dstat { border-top: 3px solid #4d8df0; }
+.dash-motion .dstat:nth-child(2) { border-top-color: #35be86; }
+.dash-motion .dstat:nth-child(3) { border-top-color: #fb9667; }
+.dash-motion .dstat:nth-child(4) { border-top-color: #aa76ed; }
+.dash-motion .dstat:nth-child(5) { border-top-color: #35bed9; }
+.dash-motion .card h3 { padding-left: 12px; border-left: 3px solid #7790f6; }
+.dash-motion .btn-primary { background: linear-gradient(110deg, #087ee0, #6150e8); box-shadow: 0 5px 16px -7px #576ad3; }
+.dash-motion .card h3 { color: #19345e; }
+.dash-motion .dept-bar-track { background: #eaf0fa; }
+.dash-motion .dept-bar-fill { transform-origin: left; animation: dashboard-bar .85s ease backwards; }
+.dash-motion .dash-trend-line { stroke-dasharray: 1; animation: dashboard-line 1.2s ease backwards; }
+.dash-motion .act-row, .dash-motion .task-row { border-color: #edf1f9; }
+.dash-motion :is(button, a, input, select):focus-visible { outline: 3px solid #547de1; outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .dash-motion .dstat:hover { transform: translateY(-2px); border-color: #b9cdef; box-shadow: 0 12px 28px -14px rgba(41,77,146,.3); }
+  .dash-motion .qa-btn:hover, .dash-motion .btn:hover { transform: translateY(-1px); }
+}
+@keyframes dashboard-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes dashboard-glow { from { transform: translate(var(--motion-x, 0px), var(--motion-y, 0px)) scale(1); } to { transform: translate(var(--motion-x, 0px), var(--motion-y, 0px)) scale(1.06); } }
+@keyframes dashboard-float { 0%, 100% { transform: translateY(0); opacity: .25; } 50% { transform: translateY(-12px); opacity: .5; } }
+@keyframes dashboard-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dashboard-line { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes dashboard-ribbon-drift { from { transform: translate(var(--motion-x, 0px), var(--motion-y, 0px)); opacity: .6; } to { transform: translate(calc(var(--motion-x, 0px) + 12px), calc(var(--motion-y, 0px) - 18px)); opacity: .9; } }
+@media (max-width: 620px), (pointer: coarse) {
+  .dash-light, .dash-wave { display: none; }
+  .dash-aurora { animation: none; }
+  .dash-ribbons { animation: none; opacity: .35; }
+  .dash-motion .dash-welcome-row { padding: 18px 16px; }
+  .dash-motion .dash-welcome-row { background: #edf3ff; }
+  .dash-atmosphere { inset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-motion *, .dash-motion *::before, .dash-motion *::after { animation: none !important; transition: none !important; }
+  .dash-motion .dstat:hover, .dash-motion .btn:hover, .dash-motion .qa-btn:hover { transform: none; }
+  .dash-wave { transform: rotate(-16deg); }
+}

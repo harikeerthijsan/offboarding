@@ -7,6 +7,7 @@ import { offboardingService } from '../services/offboardingService';
 import type { Employee, ResignationListItem } from '../types';
 import Icon, { type IconName } from '../components/Icon';
 import { formatDate } from '../utils/kt';
+import DashboardMotion from '../components/DashboardMotion';
 
 /** Deterministic dummy avatar image (generated from the person's name) with a
  * graceful fallback to coloured initials if the image can't be loaded. */
@@ -81,7 +82,7 @@ function EmployeeDashboard() {
   ];
 
   return (
-    <div className="dash">
+    <DashboardMotion>
       {/* Greeting */}
       <div className="dash-welcome-row">
         <div>
@@ -167,7 +168,7 @@ function EmployeeDashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardMotion>
   );
 }
 
@@ -177,6 +178,17 @@ const STAT_TILES: { key: keyof DashboardOverview['stats']; label: string; icon: 
   { key: 'offboarding', label: 'Serving Notice Period', icon: 'clock', color: '#ea580c', bg: '#fdeee3' },
   { key: 'exited', label: 'Exited Employees', icon: 'logout', color: '#7c3aed', bg: '#f0e9fd' },
   { key: 'departments', label: 'Departments', icon: 'building', color: '#0891b2', bg: '#e2f4f8' },
+];
+
+const PIPELINE_TILES: { key: keyof DashboardOverview['pipeline']; label: string; icon: IconName; color: string }[] = [
+  { key: 'resignation', label: 'Resignation', icon: 'file', color: '#1674f5' },
+  { key: 'notice', label: 'Notice Period', icon: 'clock', color: '#8b40f7' },
+  { key: 'kt', label: 'Knowledge Transfer', icon: 'book', color: '#f87932' },
+  { key: 'clearance', label: 'Clearances', icon: 'shield', color: '#00a9c4' },
+  { key: 'settlement', label: 'Settlement', icon: 'wallet', color: '#5371db' },
+  { key: 'exit_interview', label: 'Exit Interview', icon: 'note', color: '#be51b8' },
+  { key: 'final_review', label: 'Final Review', icon: 'clipboard', color: '#5e6a98' },
+  { key: 'completed', label: 'Completed', icon: 'check', color: '#00ad77' },
 ];
 
 function TrendChart({ t }: { t: DashboardOverview['trends'] }) {
@@ -205,7 +217,7 @@ function TrendChart({ t }: { t: DashboardOverview['trends'] }) {
         <path key={`a${si}`} d={area(s.data)} fill={s.fill} stroke="none" />
       ))}
       {series.map((s, si) => (
-        <path key={`l${si}`} d={line(s.data)} fill="none" stroke={s.color} strokeWidth="2.5"
+        <path className="dash-trend-line" pathLength="1" key={`l${si}`} d={line(s.data)} fill="none" stroke={s.color} strokeWidth="2.5"
           strokeLinecap="round" strokeLinejoin="round" />
       ))}
       {series.map((s, si) => s.data.map((v, i) => (
@@ -244,7 +256,7 @@ export default function DashboardPage() {
   const deptColors = ['#0d5aa7', '#7c3aed', '#e11d48', '#ea580c', '#f59e0b', '#0891b2', '#16a34a', '#64748b'];
 
   return (
-    <div className="dash">
+    <DashboardMotion>
       {/* Welcome header */}
       <div className="dash-welcome-row">
         <div>
@@ -263,7 +275,6 @@ export default function DashboardPage() {
       <div className="dstat-grid">
         {STAT_TILES.map(tile => {
           const m = d.stats[tile.key];
-          const up = m.trend > 0, flat = m.trend === 0;
           return (
             <div className="dstat" key={tile.key}>
               <div className="dstat-icon" style={{ background: tile.bg, color: tile.color }}>
@@ -272,10 +283,6 @@ export default function DashboardPage() {
               <div className="dstat-body">
                 <div className="dstat-label">{tile.label}</div>
                 <div className="dstat-value">{m.value}</div>
-                <div className={`dstat-trend ${flat ? 'flat' : up ? 'up' : 'down'}`}>
-                  {flat ? '—' : <Icon name={up ? 'arrow-up' : 'arrow-down'} size={13} />}
-                  {flat ? 'No change' : `${up ? '+' : ''}${m.trend}%`} <span>vs last month</span>
-                </div>
               </div>
             </div>
           );
@@ -283,6 +290,23 @@ export default function DashboardPage() {
       </div>
 
       {/* Dept overview + recent activity + upcoming tasks */}
+      <div className="card dash-pipeline-panel">
+        <div className="card-h-flex">
+          <h3>Offboarding Pipeline</h3>
+          <button className="link-btn" onClick={() => navigate('/hr/offboarding')}>View All →</button>
+        </div>
+        <p className="dash-sub">Track employees across each stage of the offboarding journey.</p>
+        <div className="dash-reference-pipeline">
+          {PIPELINE_TILES.map(stage => (
+            <div className="dash-reference-stage" key={stage.key} style={{ color: stage.color }}>
+              <span className="dash-stage-icon"><Icon name={stage.icon} size={22} /></span>
+              <span className="dash-stage-label">{stage.label}</span>
+              <strong>{d.pipeline[stage.key]}</strong>
+              <span className="dash-stage-caption">Employees</span>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="dash-row dash-row-3">
         <div className="card">
           <h3>Department Overview</h3>
@@ -354,6 +378,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardMotion>
   );
 }

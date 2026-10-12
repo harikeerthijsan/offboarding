@@ -1,3 +1,7 @@
+import time
+
+import jwt
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -77,3 +81,57 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+# ─── SSO to JSAN Skills Hub ──────────────────────────────────────────────────
+
+# OffBoarding role (6) → Skills Hub role (3).
+SKILLHUB_ROLE_MAP = {
+    'ADMIN': 'superadmin',
+    'HR': 'manager',
+    'MANAGER': 'manager',
+    'EMPLOYEE': 'employee',
+    'IT': 'employee',
+    'FINANCE': 'employee',
+}
+
+
+class SkillHubSSOView(APIView):
+    """GET /api/auth/sso/skillhub/ — mint a short-lived handoff token the Skills
+    Hub can exchange for its own session. The browser then redirects to
+    SKILLHUB_SSO_URL?token=<jwt>. The token is signed with SSO_SHARED_SECRET
+    (shared only between the two servers) and carries the JSAN ID — the common
+    identity key — never OffBoarding's own JWT."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        secret = getattr(settings, 'SSO_SHARED_SECRET', '')
+        target = getattr(settings, 'SKILLHUB_SSO_URL', '')
+        if not secret or not target:
+            return Response(
+                {'detail': 'Skills Hub SSO is not configured.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        user = request.user
+        jsan_id = (user.email or user.username or '').split('@')[0].strip().lower()
+        if not jsan_id:
+            return Response({'detail': 'No JSAN ID available for this account.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        now = int(time.time())
+        payload = {
+            'jsanId': jsan_id,
+            'name': f"{user.first_name} {user.last_name}".strip() or user.username,
+            'email': user.email or '',
+            'role': SKILLHUB_ROLE_MAP.get(user.role, 'employee'),
+            'iss': 'offboarding',
+            'aud': 'skillhub',
+            'iat': now,
+            'exp': now + 60,  # 60-second single-use handoff window
+        }
+        token = jwt.encode(payload, secret, algorithm='HS256')
+        return Response({
+            'token': token,
+            'redirect_url': f"{target}?token={token}",
+        })
