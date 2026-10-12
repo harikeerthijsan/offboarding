@@ -26,6 +26,9 @@ import NotificationCenterPage from './pages/NotificationCenterPage';
 import OffboardingRequestsPage from './pages/OffboardingRequestsPage';
 import ProfilePage from './pages/ProfilePage';
 import PoliciesPage from './pages/PoliciesPage';
+import SkillsPage from './pages/SkillsPage';
+import SkillCataloguePage from './pages/SkillCataloguePage';
+import SkillsTeamPage from './pages/SkillsTeamPage';
 
 export default function App() {
   return (
@@ -59,6 +62,9 @@ export default function App() {
               <Route path="/assets" element={<AssetsPage />} />
               <Route path="/clearances" element={<ClearanceQueuePage />} />
               <Route path="/policies" element={<PoliciesPage />} />
+              <Route path="/skills" element={<SkillsPage />} />
+              <Route path="/skills/catalogue" element={<SkillCataloguePage />} />
+              <Route path="/skills/team" element={<SkillsTeamPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

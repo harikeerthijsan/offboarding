@@ -65,6 +65,16 @@ const ALL_NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE', 'MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
   },
   {
+    path: '/skills',
+    label: 'My Skills',
+    icon: 'award',
+    roles: ['EMPLOYEE', 'MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
+    children: [
+      { path: '/skills/catalogue', label: 'Catalogue', icon: 'book', roles: ['MANAGER', 'HR', 'ADMIN'] },
+      { path: '/skills/team', label: 'Team Skills', icon: 'users', roles: ['MANAGER', 'HR', 'ADMIN'] },
+    ],
+  },
+  {
     path: '/policies',
     label: 'Policies',
     icon: 'book',

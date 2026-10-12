@@ -1939,3 +1939,12 @@ body {
 }
 .policy-meta { font-size: 12px; color: var(--text-muted); }
 .policy-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 8px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Skills Hub
+   ═══════════════════════════════════════════════════════════════════════════ */
+.skills-table th { white-space: nowrap; }
+.skills-table td { padding: 6px 8px; vertical-align: middle; }
+.sk-in { padding: 7px 9px; font-size: 13px; min-width: 110px; }
+.sk-in.sk-years { min-width: 70px; width: 72px; }
+.skills-table input.sk-in, .skills-table select.sk-in { height: 34px; }

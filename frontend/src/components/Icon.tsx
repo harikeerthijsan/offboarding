@@ -7,7 +7,7 @@ export type IconName =
   | 'laptop' | 'bell' | 'user' | 'folder' | 'file' | 'note' | 'wallet'
   | 'inbox' | 'chevron-down' | 'shield' | 'check'
   | 'clock' | 'book' | 'eye' | 'flag' | 'plus' | 'calendar'
-  | 'arrow-up' | 'arrow-down' | 'logout' | 'user-check';
+  | 'arrow-up' | 'arrow-down' | 'logout' | 'user-check' | 'award';
 
 const PATHS: Record<IconName, JSX.Element> = {
   grid: (<><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></>),
@@ -37,6 +37,7 @@ const PATHS: Record<IconName, JSX.Element> = {
   'arrow-down': (<path d="M12 5v14M6 13l6 6 6-6" />),
   logout: (<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></>),
   'user-check': (<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="m16 11 2 2 4-4" /></>),
+  award: (<><circle cx="12" cy="8" r="6" /><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12" /></>),
 };
 
 interface Props {

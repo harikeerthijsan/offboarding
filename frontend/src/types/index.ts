@@ -679,6 +679,95 @@ export interface Policy {
   updated_at: string;
 }
 
+// ─── Skills Hub ──────────────────────────────────────────────────────────────
+
+export type SkillRowStatus = 'current' | 'learned' | 'in_progress';
+export type SubmissionStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+export type CycleState =
+  | 'upcoming' | 'open' | 'overdue' | 'missed'
+  | 'draft' | 'submitted' | 'approved' | 'rejected' | 'no_cycle';
+
+export interface SkillItem {
+  name: string;
+  category: string;
+  status: SkillRowStatus | string;
+  proficiency: string;
+  tools: string[];
+  years: number | null;
+  company: string;
+  role: string;
+  customer: string;
+  note: string;
+}
+
+export interface CatalogueSkill {
+  id: number;
+  name: string;
+  tools: string[];
+  customers: string[];
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CycleRow {
+  cycle_id: string;
+  period_start: string;
+  period_end: string;
+  employee_due: string;
+  manager_due: string;
+  closure_target: string;
+  notes: string;
+  state: CycleState;
+  is_active: boolean;
+  counts?: {
+    headcount: number;
+    draft: number;
+    submitted: number;
+    approved: number;
+    rejected: number;
+  };
+}
+
+export interface SkillSubmission {
+  id: number;
+  cycle_id: string;
+  employee_name: string;
+  due_date: string | null;
+  skills: SkillItem[];
+  status: SubmissionStatus;
+  employee_note: string;
+  submitted_at: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  review_note: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MySkillsResponse {
+  profile_complete: boolean;
+  cycles: CycleRow[];
+  submissions: SkillSubmission[];
+}
+
+export interface SkillsPicker {
+  skills: CatalogueSkill[];
+  companies: string[];
+  roles: string[];
+}
+
+export interface SkillsTeamRow {
+  employee_id: string;
+  name: string;
+  department: string;
+  designation: string;
+  employment_status: string;
+  compliance: CycleState;
+  user_id: number;
+}
+
 export interface EmployeeFilters {
   search?: string;
   department?: number | string;
