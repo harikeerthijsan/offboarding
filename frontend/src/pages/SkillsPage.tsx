@@ -4,6 +4,7 @@ import { skillsService } from '../services/skillsService';
 import type { CycleRow, SkillItem, SkillsPicker } from '../types';
 import { SKILL_CATEGORIES, PROFICIENCY, SKILL_STATUSES, stateBadgeClass, stateLabel, formatDate } from '../utils/skills';
 import Icon from '../components/Icon';
+import '../styles/skills-form.css';
 
 function blankRow(): SkillItem {
   return { name: '', category: 'Technical', status: 'current', proficiency: 'Intermediate', tools: [], years: null, company: '', role: '', customer: '', note: '' };
@@ -85,7 +86,7 @@ export default function SkillsPage() {
   const editable = activeCycle && ['open', 'overdue', 'draft', 'submitted', 'rejected'].includes(activeCycle.state);
 
   return (
-    <div>
+    <div className="skills-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">My Skills</h1>
@@ -129,7 +130,7 @@ export default function SkillsPage() {
           <span className="muted">Total experience: <b style={{ color: 'var(--text)' }}>{totalYears} yr{totalYears === 1 ? '' : 's'}</b></span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="skills-editor">
           <table className="kt-table skills-table">
             <thead>
               <tr>
@@ -140,46 +141,46 @@ export default function SkillsPage() {
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i}>
-                  <td>
-                    <input className="form-input sk-in" list="sk-catalogue" value={r.name}
+                  <td data-label="Skill name">
+                    <input aria-label={`Skill ${i + 1}: name`} className="form-input sk-in" list="sk-catalogue" value={r.name}
                       onChange={e => { const name = e.target.value; setRow(i, { name, tools: toolsFor(name) }); }}
                       placeholder="Skill name" />
                   </td>
-                  <td>
-                    <select className="form-input sk-in" value={r.category} onChange={e => setRow(i, { category: e.target.value })}>
+                  <td data-label="Category">
+                    <select aria-label={`Skill ${i + 1}: category`} className="form-input sk-in" value={r.category} onChange={e => setRow(i, { category: e.target.value })}>
                       {SKILL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </td>
-                  <td>
-                    <select className="form-input sk-in" value={r.status} onChange={e => setRow(i, { status: e.target.value })}>
+                  <td data-label="Status">
+                    <select aria-label={`Skill ${i + 1}: status`} className="form-input sk-in" value={r.status} onChange={e => setRow(i, { status: e.target.value })}>
                       {SKILL_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                   </td>
-                  <td>
-                    <select className="form-input sk-in" value={r.proficiency} onChange={e => setRow(i, { proficiency: e.target.value })}>
+                  <td data-label="Proficiency level">
+                    <select aria-label={`Skill ${i + 1}: proficiency`} className="form-input sk-in" value={r.proficiency} onChange={e => setRow(i, { proficiency: e.target.value })}>
                       {PROFICIENCY.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </td>
-                  <td>
-                    <input className="form-input sk-in sk-years" type="number" min={0} max={50} step={0.5}
+                  <td data-label="Experience (years)">
+                    <input aria-label={`Skill ${i + 1}: experience in years`} className="form-input sk-in sk-years" type="number" min={0} max={50} step={0.5}
                       value={r.years ?? ''} onChange={e => setRow(i, { years: e.target.value === '' ? null : Number(e.target.value) })} />
                   </td>
-                  <td>
-                    <input className="form-input sk-in" list="sk-companies" value={r.company}
+                  <td data-label="Company">
+                    <input aria-label={`Skill ${i + 1}: company`} className="form-input sk-in" list="sk-companies" value={r.company}
                       onChange={e => setRow(i, { company: e.target.value })} />
                   </td>
-                  <td>
-                    <input className="form-input sk-in" list="sk-roles" value={r.role}
+                  <td data-label="Role">
+                    <input aria-label={`Skill ${i + 1}: role`} className="form-input sk-in" list="sk-roles" value={r.role}
                       onChange={e => setRow(i, { role: e.target.value })} />
                   </td>
-                  <td>
-                    <input className="form-input sk-in" value={r.customer} onChange={e => setRow(i, { customer: e.target.value })} />
+                  <td data-label="Customer / project">
+                    <input aria-label={`Skill ${i + 1}: customer or project`} className="form-input sk-in" value={r.customer} onChange={e => setRow(i, { customer: e.target.value })} />
+                  </td>
+                  <td data-label="Skill note">
+                    <input aria-label={`Skill ${i + 1}: note`} className="form-input sk-in" value={r.note} onChange={e => setRow(i, { note: e.target.value })} />
                   </td>
                   <td>
-                    <input className="form-input sk-in" value={r.note} onChange={e => setRow(i, { note: e.target.value })} />
-                  </td>
-                  <td>
-                    <button className="btn btn-ghost btn-sm" onClick={() => removeRow(i)} title="Remove" disabled={rows.length === 1}>✕</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => removeRow(i)} aria-label={`Remove skill ${i + 1}`} disabled={rows.length === 1}>Remove skill</button>
                   </td>
                 </tr>
               ))}

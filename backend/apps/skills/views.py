@@ -4,7 +4,10 @@ Role mapping from the source app's 3 roles to ours:
   employee actions  -> any authenticated user
   staff actions     -> MANAGER / HR / ADMIN (view team, export, manage catalogue & cycles)
 """
+from datetime import date
+
 from django.db import transaction
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -14,7 +17,8 @@ from rest_framework.views import APIView
 from apps.employees.models import Employee
 
 from .cycles import active_cycle, cycles_for, compliance_of
-from .models import SkillDefinition, ReviewCycle, SkillSubmission
+from .export import build_workbook
+from .models import SkillDefinition, ReviewCycle, SkillSubmission, SUBMISSION_STATUS
 from .serializers import (
     SkillDefinitionSerializer, ReviewCycleSerializer, SkillSubmissionSerializer,
     clean_skills, _list_field,
@@ -141,8 +145,16 @@ class SkillsPickerView(APIView):
 # ─── Review calendar ─────────────────────────────────────────────────────────
 
 class CyclesView(APIView):
-    """GET /api/skills/cycles/ — company calendar; staff also get per-cycle counts."""
-    permission_classes = [IsAuthenticated]
+    """GET  /api/skills/cycles/ — company calendar; staff also get per-cycle counts.
+       POST /api/skills/cycles/ — create a review cycle (staff)."""
+    def get_permissions(self):
+        return [IsSkillsStaff()] if self.request.method == 'POST' else [IsAuthenticated()]
+
+    def post(self, request):
+        ser = ReviewCycleSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        cycle = ser.save()
+        return Response(ReviewCycleSerializer(cycle).data, status=status.HTTP_201_CREATED)
 
     def get(self, request):
         docs = list(ReviewCycle.objects.all())
@@ -245,3 +257,89 @@ class TeamView(APIView):
                 'user_id': e.user_id,
             })
         return Response({'team': rows})
+
+
+class CycleDetailView(APIView):
+    """PATCH/DELETE /api/skills/cycles/{pk}/ — edit / remove a review cycle (staff)."""
+    permission_classes = [IsSkillsStaff]
+
+    def patch(self, request, pk):
+        try:
+            cycle = ReviewCycle.objects.get(pk=pk)
+        except ReviewCycle.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        ser = ReviewCycleSerializer(cycle, data=request.data, partial=True)
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        return Response(ser.data)
+
+    def delete(self, request, pk):
+        ReviewCycle.objects.filter(pk=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StaffSubmissionsView(APIView):
+    """GET /api/skills/submissions/all/ — staff submission list.
+    Filters: ?status=submitted|approved|rejected|draft|all  &cycle=2027-H1"""
+    permission_classes = [IsSkillsStaff]
+
+    def get(self, request):
+        raw = request.query_params.get('status', 'all')
+        valid = {s for s, _ in SUBMISSION_STATUS}
+        qs = SkillSubmission.objects.select_related('user', 'cycle', 'reviewed_by')
+        if raw != 'all':
+            if raw not in valid:
+                return Response({'detail': 'Invalid status.'}, status=status.HTTP_400_BAD_REQUEST)
+            qs = qs.filter(status=raw)
+        cycle = request.query_params.get('cycle')
+        if cycle:
+            qs = qs.filter(cycle__cycle_id=cycle)
+        qs = qs.order_by('-submitted_at', '-updated_at')
+        return Response({'submissions': SkillSubmissionSerializer(qs, many=True).data})
+
+
+class ExportView(APIView):
+    """GET /api/skills/export/ — download the JSAN/QF/09 skill-matrix workbook (staff).
+    ?status=all|submitted|... &cycle=2027-H1 . 'all' lists every employee (blanks
+    show who hasn't submitted); a status filters to matching people only."""
+    permission_classes = [IsSkillsStaff]
+
+    def get(self, request):
+        raw = request.query_params.get('status', 'all')
+        valid = {s for s, _ in SUBMISSION_STATUS}
+        sub_qs = SkillSubmission.objects.select_related('cycle')
+        if raw != 'all':
+            if raw not in valid:
+                return Response({'detail': 'Invalid status.'}, status=status.HTTP_400_BAD_REQUEST)
+            sub_qs = sub_qs.filter(status=raw)
+        cycle = request.query_params.get('cycle')
+        if cycle:
+            sub_qs = sub_qs.filter(cycle__cycle_id=cycle)
+
+        # Latest matching submission per user.
+        latest = {}
+        for s in sub_qs.order_by('updated_at'):
+            latest[s.user_id] = {
+                'cycle_id': s.cycle.cycle_id,
+                'status': s.status,
+                'skills': s.skills or [],
+                'employee_note': s.employee_note,
+                'submitted_at': (s.submitted_at.strftime('%Y-%m-%d %H:%M')
+                                 if s.submitted_at else ''),
+            }
+
+        people = (Employee.objects
+                  .select_related('department', 'designation')
+                  .exclude(user__isnull=True)
+                  .order_by('first_name', 'last_name'))
+        data = build_workbook(people, latest, include_everyone=(raw == 'all'))
+
+        stamp = date.today().isoformat()
+        fname = f"JSAN_QF09_Employee_Skill_Matrix_{cycle or 'all-cycles'}_{raw}_{stamp}.xlsx"
+        resp = HttpResponse(
+            data,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        resp['Content-Disposition'] = f'attachment; filename="{fname}"'
+        resp['Cache-Control'] = 'no-store'
+        return resp

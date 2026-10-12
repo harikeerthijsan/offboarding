@@ -73,3 +73,20 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Created `USER_GUIDE.md` with role responsibilities, an end-to-end walkthrough, specific button instructions, troubleshooting, and test-reset guidance without storing credentials.
 - Documented current behavior that differs from earlier advice/README: initial resignation dates are automatic; completing notice sets the employee EXITED before final approval; asset declaration is blocked after notice completion; final review accepts submitted or reviewed interviews.
 - Validation: `git diff --check` passed; reviewed headings and source-backed workflow steps. Documentation-only task; no application build/tests required. No live workflow testing was performed.
+- Skills form UI: updated `frontend/src/pages/SkillsPage.tsx` and added `frontend/src/styles/skills-form.css` to present skill entries as labeled, responsive cards instead of a cramped horizontal table. Added accessible field names and clearer removal controls; preserved existing fields, datalists, validation, save/submit handlers, and cycle rules. Production build passed (with Vite's bundle-size advisory); browser verification not performed. Preserved existing backend skills edits. Redeploy frontend for live changes.
+# Skills Hub visibility review — 2026-10-12
+
+- Confirmed employee access in sidebar navigation and the authenticated SSO endpoint; employees map to the external hub's employee role.
+- Moved the existing Skills Hub button in `frontend/src/components/Sidebar.tsx` directly below My Skills, instead of after the entire navigation list. Preserved SSO behavior and permissions.
+- Validation: frontend build and diff whitespace check passed (existing bundle-size advisory). Live deployment, external SSO configuration, and employee browser view were not tested. Missing SSO configuration affects opening the hub, not whether its link renders. Redeploy frontend to apply the placement change.
+# Internal Skills Hub navigation — 2026-10-12
+
+- Corrected `frontend/src/components/Sidebar.tsx`: Skills Hub now uses the existing internal `/skills` NavLink for every supported role, replacing the duplicate external SSO button and its error alert/loading handler. Catalogue and Team Skills retain their existing role visibility.
+- Renamed the former My Skills navigation entry to Skills Hub; the destination remains the existing My Skills page. No external service configuration is needed for this navigation. Left unrelated backend/service code and existing edits intact.
+- Validation: frontend production build passed after removing unused imports; live employee browser flow not tested. Redeploy frontend to apply the correction.
+
+## 2026-10-12 � Commit and push pending skills changes
+
+- User requested committing and pushing all pending code. Included existing backend skills cycle/submission/export work alongside the responsive skills form, internal Skills Hub navigation, and change log.
+- Validation: all 12 backend skills tests passed with DEBUG=False for the test process; frontend build previously passed; git diff --check passed.
+

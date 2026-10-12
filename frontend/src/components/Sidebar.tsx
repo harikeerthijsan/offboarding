@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
-import { authService } from '../services/authService';
 import type { UserRole } from '../types';
 import Icon, { type IconName } from './Icon';
 
@@ -66,7 +64,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   },
   {
     path: '/skills',
-    label: 'My Skills',
+    label: 'Skills Hub',
     icon: 'award',
     roles: ['EMPLOYEE', 'MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
     children: [
@@ -106,21 +104,6 @@ function getInitials(firstName: string, lastName: string): string {
 
 export default function Sidebar() {
   const { user } = useAuthContext();
-  const [ssoBusy, setSsoBusy] = useState(false);
-
-  const openSkillHub = async () => {
-    if (ssoBusy) return;
-    setSsoBusy(true);
-    try {
-      const { redirect_url } = await authService.skillHubSSO();
-      // Full navigation so the Skills Hub can set its own session cookie.
-      window.location.assign(redirect_url);
-    } catch {
-      setSsoBusy(false);
-      alert('Skills Hub is not available right now. Please try again later.');
-    }
-  };
-
   const visibleItems = ALL_NAV_ITEMS.filter(
     item => user && item.roles.includes(user.role)
   );
@@ -159,20 +142,6 @@ export default function Sidebar() {
           );
         })}
 
-        {/* External app — single sign-on handoff to the JSAN Skills Hub */}
-        <button
-          type="button"
-          className="nav-link nav-link-external"
-          onClick={openSkillHub}
-          disabled={ssoBusy}
-          title="Open the JSAN Skills Hub (single sign-on)"
-        >
-          <span className="nav-icon"><Icon name="bar-chart" size={18} /></span>
-          <span>Skills Hub</span>
-          {ssoBusy
-            ? <span className="btn-spinner" style={{ marginLeft: 'auto' }} />
-            : <span className="nav-external-mark" aria-hidden="true">↗</span>}
-        </button>
       </nav>
 
       {user && (

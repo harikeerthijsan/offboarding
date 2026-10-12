@@ -1,0 +1,26 @@
+.skills-page { max-width: 1200px; margin-inline: auto; }
+.skills-page .skills-editor { overflow: visible; }
+.skills-page .skills-table { display: block; width: 100%; min-width: 0; }
+.skills-page .skills-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skills-page .skills-table tbody { display: grid; gap: 16px; }
+.skills-page .skills-table tbody tr {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;
+  padding: 20px; border: 1px solid #dce5f2; border-radius: 14px;
+  background: linear-gradient(135deg, #f8faff, #fff);
+}
+.skills-page .skills-table tbody tr:hover { background: linear-gradient(135deg, #f8faff, #fff); }
+.skills-page .skills-table td { display: block; min-width: 0; padding: 0; border: 0; white-space: normal; }
+.skills-page .skills-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.skills-page .skills-table .sk-in { width: 100%; min-width: 0; max-width: none; height: 42px; background: #fff; border-radius: 8px; font-size: 14px; }
+.skills-page .skills-table td:last-child { grid-column: 1 / -1; display: flex; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--border); }
+.skills-page .skills-table td:last-child button { color: #b42338; }
+.skills-page .skills-table td:last-child button:disabled { color: var(--text-muted); }
+.skills-page .form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding-top: 18px; border-top: 1px solid var(--border); }
+.skills-page :is(input, select, textarea, button):focus-visible { outline: 3px solid #7c9edb; outline-offset: 2px; }
+@media (max-width: 900px) { .skills-page .skills-table tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .skills-page .skills-table tbody tr { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 14px; }
+  .skills-page .card-h-flex { flex-wrap: wrap; gap: 8px; }
+  .skills-page .form-actions > button { flex: 1; }
+  .skills-page > .card:last-child { overflow-x: auto; }
+}
