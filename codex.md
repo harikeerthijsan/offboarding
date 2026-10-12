@@ -85,8 +85,14 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Renamed the former My Skills navigation entry to Skills Hub; the destination remains the existing My Skills page. No external service configuration is needed for this navigation. Left unrelated backend/service code and existing edits intact.
 - Validation: frontend production build passed after removing unused imports; live employee browser flow not tested. Redeploy frontend to apply the correction.
 
-## 2026-10-12 � Commit and push pending skills changes
+## 2026-10-12 — Commit and push pending skills changes
 
 - User requested committing and pushing all pending code. Included existing backend skills cycle/submission/export work alongside the responsive skills form, internal Skills Hub navigation, and change log.
 - Validation: all 12 backend skills tests passed with DEBUG=False for the test process; frontend build previously passed; git diff --check passed.
 
+
+# Full project testing — 2026-10-12
+
+- All 455 Django tests passed in 482.322 seconds; Django checks, migration consistency, and frontend TypeScript/production build passed.
+- Lint blocked by missing ESLint configuration. Local deployment check warns about SECRET_KEY strength; Vite reports a bundle-size advisory. Browser/live UI testing remains unperformed.
+- Added `TEST_REPORT.md` with results and limits; normalized legacy encoding in this log to UTF-8. No application code changes.
