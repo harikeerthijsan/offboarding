@@ -23,5 +23,6 @@ urlpatterns = [
     path('api/exit-interviews/analytics/', ExitInterviewAnalyticsView.as_view(), name='exit-interview-analytics'),
     path('api/', include('apps.documents.urls')),
     path('api/policies/', include('apps.policies.urls')),
+    path('api/skills/', include('apps.skills.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
 ]
