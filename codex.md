@@ -142,3 +142,9 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Purpose: the existing file-based correct_exit_emails needs the workbook; this baked version can run on the live server via Railway SSH (like add_gis_employees).
 - Local run: 0 updated / 61 skipped (already correct) / 3 conflicts — matches expectations. Django check clean.
 - Remaining: run on live to replace the .local placeholders; 4 rows need manual clarification (JSAN294 blank; JSAN215/016/159 emails already held by active JSAN278/291/303).
+
+## 2026-10-13 — Resolve the 4 exit-email conflicts
+
+- JSAN215 / JSAN016 / JSAN159 are rehire duplicates: the real email is correctly held by the active record (JSAN278 / JSAN291 / JSAN303). Gave the old exited record a unique plus-addressed variant (e.g. avelmarthi+jsan215@jsanconsulting.com) so it leaves .local without touching the active login.
+- JSAN294 (Pulluru Vinay Kumar) was blank in the workbook; derived vpulluru@jsanconsulting.com (verified free).
+- Baked all four into sync_exit_emails ROSTER. Local run: 4 updated, 61 skipped (already correct), 0 conflicts; no exited employee remains on @jsan.local.

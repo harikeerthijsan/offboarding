@@ -47,12 +47,17 @@ ROSTER = [
     ('JSAN236', 'rchandaluri@jsanconsulting.com'),
     ('JSAN153', 'pkarukola@jsanconsulting.com'),
     ('JSAN213', 'mmyle@jsanconsulting.com'),
-    ('JSAN215', 'avelmarthi@jsanconsulting.com'),
+    # Rehire duplicate: real email avelmarthi@ belongs to the active JSAN278; use a unique variant here.
+    ('JSAN215', 'avelmarthi+jsan215@jsanconsulting.com'),
     ('JSAN260', 'aahmed@jsanconsulting.com'),
-    ('JSAN016', 'dburlagadda@jsanconsulting.com'),
+    # Rehire duplicate: real email belongs to the active JSAN291; use a unique variant here.
+    ('JSAN016', 'dburlagadda+jsan016@jsanconsulting.com'),
     ('JSAN258', 'rnpalthyavath@jsanconsulting.com'),
     ('JSAN273', 'svineeth@jsanconsulting.com'),
-    ('JSAN159', 'ssoma@jsanconsulting.com'),
+    # Rehire duplicate: real email belongs to the active JSAN303; use a unique variant here.
+    ('JSAN159', 'ssoma+jsan159@jsanconsulting.com'),
+    # Blank in the workbook; derived from the name (firstinitial + surname).
+    ('JSAN294', 'vpulluru@jsanconsulting.com'),
     ('JSAN201', 'vgdundigal@jsanconsulting.com'),
     ('JSAN218', 'mkatta@jsanconsulting.com'),
     ('JSAN263', 'sedapalapati@jsanconsulting.com'),
