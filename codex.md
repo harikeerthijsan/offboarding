@@ -135,3 +135,10 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Added `correct_exit_emails` management command to match Exit-sheet emails by JSAN ID, validate uniqueness/ownership, and update employee plus login email atomically. Preview rolls back by default; passwords/usernames/statuses remain unchanged. Trimmed spaces and stray trailing periods.
 - Corrected 61 exited employee emails locally using the supplied workbook. Three addresses conflict with active employees (JSAN215/JSAN278, JSAN016/JSAN291, JSAN159/JSAN303); JSAN294 has a blank sheet email. Those four remain unchanged pending clarification.
 - Validation: preview and apply completed; repeated preview shows zero further updates for resolvable rows. No live-data changes or push performed.
+
+## 2026-10-13 — Baked exit-email sync command (runnable on live)
+
+- Added `backend/apps/employees/management/commands/sync_exit_emails.py`: idempotent command with 64 JSAN ID -> real email mappings baked in from the Exit sheet of "List of active & exit Employees (2).xlsx" (blank JSAN294 omitted). Updates Employee + linked User email/username together, only for EXITED employees; skips already-correct rows and reports ownership conflicts (JSAN215/JSAN016/JSAN159) without overwriting.
+- Purpose: the existing file-based correct_exit_emails needs the workbook; this baked version can run on the live server via Railway SSH (like add_gis_employees).
+- Local run: 0 updated / 61 skipped (already correct) / 3 conflicts — matches expectations. Django check clean.
+- Remaining: run on live to replace the .local placeholders; 4 rows need manual clarification (JSAN294 blank; JSAN215/016/159 emails already held by active JSAN278/291/303).
