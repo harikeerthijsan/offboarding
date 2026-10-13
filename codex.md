@@ -153,3 +153,8 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 
 - Added `backend/apps/accounts/management/commands/set_role.py`: set a user's role by employee ID or email (argument-only, so it runs cleanly over railway ssh).
 - Set JSAN252 (Satish V) to ADMIN locally; will apply on live.
+
+## 2026-10-13 — Comprehensive user guide
+
+- Rewrote USER_GUIDE.md as a complete, role-by-role guide covering: sign-in/account, roles, navigation/dashboards, profile self-service + password change, employees/organization + CSV export, the full 11-step offboarding walkthrough, assets & clearance, exit documents, Policies, Skills Hub (My Skills/Catalogue/Team/Review Cycles/Export/Import), notifications & email, troubleshooting, and admin/ops commands (reset_offboarding, set_role, add_gis_employees, sync_exit_emails).
+- Documentation only.
