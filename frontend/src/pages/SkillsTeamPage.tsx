@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { skillsService } from '../services/skillsService';
+import { storage } from '../utils/storage';
 import type { SkillsTeamRow } from '../types';
 import { stateBadgeClass, stateLabel } from '../utils/skills';
+import Icon from '../components/Icon';
 
 export default function SkillsTeamPage() {
   const [team, setTeam] = useState<SkillsTeamRow[]>([]);
@@ -32,6 +34,25 @@ export default function SkillsTeamPage() {
   }), [team, dept, search]);
 
   const submitted = team.filter(t => ['submitted', 'approved'].includes(t.compliance)).length;
+  const [exporting, setExporting] = useState(false);
+
+  async function exportXlsx() {
+    setExporting(true); setError('');
+    try {
+      const token = storage.getAccessToken();
+      const resp = await fetch(skillsService.exportUrl({ status: 'all' }), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!resp.ok) { setError('Export failed.'); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'JSAN_QF09_Skill_Matrix_all-cycles_all.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch { setError('Export failed.'); }
+    finally { setExporting(false); }
+  }
 
   return (
     <div>
@@ -40,7 +61,12 @@ export default function SkillsTeamPage() {
           <h1 className="page-title">Team Skills</h1>
           <p className="page-subtitle">Each person's status for the active review cycle</p>
         </div>
-        <span className="muted">{submitted}/{team.length} submitted</span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span className="muted">{submitted}/{team.length} submitted</span>
+          <button className="btn btn-secondary" onClick={exportXlsx} disabled={exporting}>
+            {exporting ? 'Exporting…' : <><Icon name="file" size={15} /> Export Excel</>}
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}

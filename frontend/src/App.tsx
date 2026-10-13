@@ -29,6 +29,7 @@ import PoliciesPage from './pages/PoliciesPage';
 import SkillsPage from './pages/SkillsPage';
 import SkillCataloguePage from './pages/SkillCataloguePage';
 import SkillsTeamPage from './pages/SkillsTeamPage';
+import SkillsCyclesPage from './pages/SkillsCyclesPage';
 
 export default function App() {
   return (
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="/skills" element={<SkillsPage />} />
               <Route path="/skills/catalogue" element={<SkillCataloguePage />} />
               <Route path="/skills/team" element={<SkillsTeamPage />} />
+              <Route path="/skills/cycles" element={<SkillsCyclesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

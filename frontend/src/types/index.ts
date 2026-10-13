@@ -711,6 +711,7 @@ export interface CatalogueSkill {
 }
 
 export interface CycleRow {
+  id: number;
   cycle_id: string;
   period_start: string;
   period_end: string;

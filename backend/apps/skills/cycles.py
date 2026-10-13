@@ -51,6 +51,7 @@ def cycles_for(cycles, subs_by_cycle_id, today=None):
         else:
             state = 'open'
         out.append({
+            'id': c.id,
             'cycle_id': c.cycle_id,
             'period_start': c.period_start,
             'period_end': c.period_end,

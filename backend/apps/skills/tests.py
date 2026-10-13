@@ -125,3 +125,51 @@ class CatalogueAndStaffTest(SkillsSetup):
     def test_employee_cannot_view_team(self):
         auth(self.client, self.emp_user)
         self.assertEqual(self.client.get('/api/skills/team/').status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CycleManagementTest(SkillsSetup):
+    def test_staff_create_edit_delete_cycle(self):
+        auth(self.client, self.hr)
+        r = self.client.post('/api/skills/cycles/', {
+            'cycle_id': '2027-H1', 'period_start': '2027-01-01', 'period_end': '2027-06-30',
+            'employee_due': '2027-02-15', 'manager_due': '2027-02-28', 'closure_target': '2027-03-15',
+        }, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        cid = r.data['id']
+        p = self.client.patch(f'/api/skills/cycles/{cid}/', {'notes': 'go'}, format='json')
+        self.assertEqual(p.status_code, status.HTTP_200_OK)
+        self.assertEqual(p.data['notes'], 'go')
+        d = self.client.delete(f'/api/skills/cycles/{cid}/')
+        self.assertEqual(d.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_employee_cannot_create_cycle(self):
+        auth(self.client, self.emp_user)
+        r = self.client.post('/api/skills/cycles/', {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cycles_list_includes_id(self):
+        auth(self.client, self.hr)
+        rows = self.client.get('/api/skills/cycles/').data['cycles']
+        self.assertTrue(all('id' in c for c in rows))
+
+
+class ExportTest(SkillsSetup):
+    def test_staff_export_returns_xlsx(self):
+        auth(self.client, self.emp_user)
+        self.client.post('/api/skills/submissions/', {'submit': True, 'skills': [{'name': 'Python', 'years': 2}]}, format='json')
+        auth(self.client, self.hr)
+        r = self.client.get('/api/skills/export/?status=all')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertIn('spreadsheetml', r['Content-Type'])
+        self.assertGreater(len(r.content), 2000)
+
+    def test_staff_submissions_list_filters(self):
+        auth(self.client, self.emp_user)
+        self.client.post('/api/skills/submissions/', {'submit': True, 'skills': [{'name': 'Python'}]}, format='json')
+        auth(self.client, self.hr)
+        self.assertEqual(len(self.client.get('/api/skills/submissions/all/?status=submitted').data['submissions']), 1)
+        self.assertEqual(len(self.client.get('/api/skills/submissions/all/?status=draft').data['submissions']), 0)
+
+    def test_employee_cannot_export(self):
+        auth(self.client, self.emp_user)
+        self.assertEqual(self.client.get('/api/skills/export/').status_code, status.HTTP_403_FORBIDDEN)

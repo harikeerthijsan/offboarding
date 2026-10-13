@@ -96,3 +96,12 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - All 455 Django tests passed in 482.322 seconds; Django checks, migration consistency, and frontend TypeScript/production build passed.
 - Lint blocked by missing ESLint configuration. Local deployment check warns about SECRET_KEY strength; Vite reports a bundle-size advisory. Browser/live UI testing remains unperformed.
 - Added `TEST_REPORT.md` with results and limits; normalized legacy encoding in this log to UTF-8. No application code changes.
+
+## 2026-10-13 — Skills Hub Phase 3 frontend (cycle management + export)
+
+- Added `frontend/src/pages/SkillsCyclesPage.tsx`: staff Review Cycles manager (list, create/edit/delete via modal) plus an Excel export panel (status + cycle filter) that fetches with the auth header and downloads a blob.
+- Added an "Export Excel" button to `frontend/src/pages/SkillsTeamPage.tsx`.
+- Extended `frontend/src/services/skillsService.ts` with createCycle/updateCycle/deleteCycle and exportUrl; added CyclePayload type.
+- Added `id` to the cycles_for output (`backend/apps/skills/cycles.py`) and to the CycleRow type so the manager can edit/delete; routed `/skills/cycles` and added a Review Cycles sidebar sub-item (HR/ADMIN).
+- Added backend tests for Phase 3 (cycle CRUD, export xlsx, staff submissions filters, permission gates).
+- Validation: 18/18 skills tests pass; Django check clean; frontend tsc + vite build clean.

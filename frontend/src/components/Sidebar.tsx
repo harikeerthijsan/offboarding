@@ -70,6 +70,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
     children: [
       { path: '/skills/catalogue', label: 'Catalogue', icon: 'book', roles: ['MANAGER', 'HR', 'ADMIN'] },
       { path: '/skills/team', label: 'Team Skills', icon: 'users', roles: ['MANAGER', 'HR', 'ADMIN'] },
+      { path: '/skills/cycles', label: 'Review Cycles', icon: 'calendar', roles: ['HR', 'ADMIN'] },
     ],
   },
   {
