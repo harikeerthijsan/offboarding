@@ -120,3 +120,8 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Linked JSAN083 to Kalpesh Mehta (JSAN005). Anjali Singh and Damodar manager records were not found, so JSAN022 and JSAN400 manager links remain pending clarification.
 - Local and Railway dry-runs passed; applied the requested import locally and live. Added two automated tests for dry-run rollback and repeat-run preservation; both passed. Django check passed.
 - The earlier draft `import_missing_employees.py` remains uncommitted and is not part of this change. The broader missing-employees sync was stopped and has not been applied.
+# Correct JSAN083 details — 2026-10-13
+
+- Corrected JSAN083 locally and live to Anjali Singh, joining date 2021-04-19, phone 9011099221, and designation Account Manager - IN. Used Recruitment-IN based on the corrected designation. Preserved email, password, account role, status, and Kalpesh reporting-manager link.
+- Linked JSAN022 (Kajal) to JSAN083 as the previously supplied reporting manager. Updated deployment seed data and regression assertions to match; existing rows remain preserved during later deployments.
+- Validation: targeted employee import tests passed; local/live correction completed. Updated code pushed to main under the continuing request to add these employees and push.

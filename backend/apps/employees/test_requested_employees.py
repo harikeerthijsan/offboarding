@@ -25,6 +25,11 @@ class RequestedEmployeeImportTests(TestCase):
         call_command('seed_requested_employees', stdout=StringIO())
         anjali = Employee.objects.get(employee_id='JSAN083')
         self.assertEqual(anjali.manager.employee_id, 'JSAN005')
+        self.assertEqual(anjali.last_name, 'Singh')
+        self.assertEqual(anjali.phone, '9011099221')
+        self.assertEqual(anjali.department.name, 'Recruitment-IN')
+        self.assertEqual(anjali.designation.name, 'Account Manager - IN')
+        self.assertEqual(Employee.objects.get(employee_id='JSAN022').manager_id, anjali.pk)
         self.assertEqual(anjali.employment_status, 'ACTIVE')
         self.assertFalse(anjali.user.has_usable_password())
         anjali.employment_status = 'EXITED'

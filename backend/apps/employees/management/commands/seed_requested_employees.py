@@ -9,10 +9,10 @@ from apps.employees.models import Department, Designation, Employee
 
 
 RECORDS = [
+    ('JSAN083', 'Anjali', 'Singh', 'asingh@jsanconsulting.com',
+     date(2021, 4, 19), 'Recruitment-IN', 'Account Manager - IN', 'JSAN005'),
     ('JSAN022', 'Kajal', 'Prajwal Mendon', 'ksalian@jsanconsulting.com',
-     date(2020, 8, 6), 'Recruitment-IN', 'Domestic Recruiter', None),
-    ('JSAN083', 'Anjali', 'Bhadouria', 'asingh@jsanconsulting.com',
-     date(2021, 4, 19), 'Recruitment-UK/EU', 'Account Manager', 'JSAN005'),
+     date(2020, 8, 6), 'Recruitment-IN', 'Domestic Recruiter', 'JSAN083'),
     ('JSAN400', 'Puranapu', 'Shiva Ramakrishna', 'spuranapu@jsanconsulting.com',
      date(2026, 10, 1), 'GIS', 'Trainee', None),
 ]
@@ -53,7 +53,8 @@ class Command(BaseCommand):
                 Employee.objects.create(
                     employee_id=eid, user=user, first_name=first, last_name=last,
                     email=email, joining_date=joined, department=department,
-                    designation=designation, manager=manager, employment_status='ACTIVE')
+                    designation=designation, manager=manager, employment_status='ACTIVE',
+                    phone='9011099221' if eid == 'JSAN083' else '')
                 self.stdout.write(f'{eid}: created ACTIVE' + ('; reporting manager pending' if not manager else ''))
             if options['dry_run']:
                 transaction.set_rollback(True)
