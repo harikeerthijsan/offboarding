@@ -125,3 +125,13 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Corrected JSAN083 locally and live to Anjali Singh, joining date 2021-04-19, phone 9011099221, and designation Account Manager - IN. Used Recruitment-IN based on the corrected designation. Preserved email, password, account role, status, and Kalpesh reporting-manager link.
 - Linked JSAN022 (Kajal) to JSAN083 as the previously supplied reporting manager. Updated deployment seed data and regression assertions to match; existing rows remain preserved during later deployments.
 - Validation: targeted employee import tests passed; local/live correction completed. Updated code pushed to main under the continuing request to add these employees and push.
+# Link Shiva's reporting manager — 2026-10-13
+
+- Confirmed screenshot manager JSAN349 is Damoder Reddy Banala and linked local JSAN400 to that employee.
+- Updated requested-employee seed and regression tests with the confirmed manager. Both targeted tests passed.
+- No live database change, commit, or push performed, following the user's instruction to withhold pushes. Existing live records are preserved by the seed, so the live JSAN400 manager will require an explicit data update when authorized.
+# Correct exited employee emails from workbook — 2026-10-13
+
+- Added `correct_exit_emails` management command to match Exit-sheet emails by JSAN ID, validate uniqueness/ownership, and update employee plus login email atomically. Preview rolls back by default; passwords/usernames/statuses remain unchanged. Trimmed spaces and stray trailing periods.
+- Corrected 61 exited employee emails locally using the supplied workbook. Three addresses conflict with active employees (JSAN215/JSAN278, JSAN016/JSAN291, JSAN159/JSAN303); JSAN294 has a blank sheet email. Those four remain unchanged pending clarification.
+- Validation: preview and apply completed; repeated preview shows zero further updates for resolvable rows. No live-data changes or push performed.

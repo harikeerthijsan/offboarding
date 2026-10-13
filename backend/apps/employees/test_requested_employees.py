@@ -15,10 +15,14 @@ class RequestedEmployeeImportTests(TestCase):
             username='manager', email='manager@example.com', password='test-only', role='MANAGER')
         Employee.objects.create(employee_id='JSAN005', user=user, first_name='Kalpesh',
                                 last_name='Mehta', email=user.email, joining_date='2020-01-01')
+        damoder = get_user_model().objects.create_user(
+            username='damoder', email='damoder@example.com', role='MANAGER')
+        Employee.objects.create(employee_id='JSAN349', user=damoder, first_name='Damoder',
+                                last_name='Reddy Banala', email=damoder.email, joining_date='2026-07-01')
 
     def test_dry_run_does_not_persist(self):
         call_command('seed_requested_employees', dry_run=True, stdout=StringIO())
-        self.assertEqual(Employee.objects.count(), 1)
+        self.assertEqual(Employee.objects.count(), 2)
         self.assertFalse(get_user_model().objects.filter(email='ksalian@jsanconsulting.com').exists())
 
     def test_import_preserves_records_on_repeat(self):
@@ -30,11 +34,12 @@ class RequestedEmployeeImportTests(TestCase):
         self.assertEqual(anjali.department.name, 'Recruitment-IN')
         self.assertEqual(anjali.designation.name, 'Account Manager - IN')
         self.assertEqual(Employee.objects.get(employee_id='JSAN022').manager_id, anjali.pk)
+        self.assertEqual(Employee.objects.get(employee_id='JSAN400').manager.employee_id, 'JSAN349')
         self.assertEqual(anjali.employment_status, 'ACTIVE')
         self.assertFalse(anjali.user.has_usable_password())
         anjali.employment_status = 'EXITED'
         anjali.save()
         call_command('seed_requested_employees', stdout=StringIO())
         anjali.refresh_from_db()
-        self.assertEqual(Employee.objects.count(), 4)
+        self.assertEqual(Employee.objects.count(), 5)
         self.assertEqual(anjali.employment_status, 'EXITED')

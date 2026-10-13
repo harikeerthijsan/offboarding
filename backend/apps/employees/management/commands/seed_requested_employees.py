@@ -14,7 +14,7 @@ RECORDS = [
     ('JSAN022', 'Kajal', 'Prajwal Mendon', 'ksalian@jsanconsulting.com',
      date(2020, 8, 6), 'Recruitment-IN', 'Domestic Recruiter', 'JSAN083'),
     ('JSAN400', 'Puranapu', 'Shiva Ramakrishna', 'spuranapu@jsanconsulting.com',
-     date(2026, 10, 1), 'GIS', 'Trainee', None),
+     date(2026, 10, 1), 'GIS', 'Trainee', 'JSAN349'),
 ]
 
 
