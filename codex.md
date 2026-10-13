@@ -113,3 +113,10 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Frontend: "Import Calendar" button + modal on `SkillsCyclesPage.tsx`; `importCalendar` in skillsService.
 - Added 4 backend tests (upsert + skip bad rows, idempotent re-import, employee 403, no-cycle-id 400).
 - Validation: 22/22 skills tests pass; Django check clean; frontend tsc + vite build clean.
+# Add three requested active employees — 2026-10-13
+
+- Added `seed_requested_employees` management command and invoked it on backend startup after initial seeding. Creates JSAN022 (Kajal Prajwal Mendon), JSAN083 (Anjali Bhadouria), and JSAN400 (Puranapu Shiva Ramakrishna) using supplied emails and screenshot dates/departments/designations.
+- Set new profiles ACTIVE and accounts to EMPLOYEE. Passwords are unusable until HR provisions them; no shared credentials added. Existing employee/account data is preserved on repeat runs.
+- Linked JSAN083 to Kalpesh Mehta (JSAN005). Anjali Singh and Damodar manager records were not found, so JSAN022 and JSAN400 manager links remain pending clarification.
+- Local and Railway dry-runs passed; applied the requested import locally and live. Added two automated tests for dry-run rollback and repeat-run preservation; both passed. Django check passed.
+- The earlier draft `import_missing_employees.py` remains uncommitted and is not part of this change. The broader missing-employees sync was stopped and has not been applied.
