@@ -50,6 +50,8 @@ ROSTER = [
     ('JSAN380', 'Sai Sanjana', 'Gunda', 'sgunda@jsanconsulting.com', 'GIS', 'Recruiter', '2026-09-23'),
     ('JSAN381', 'Ravinder', 'Ravula', 'rravula@jsanconsulting.com', 'GIS', 'Project Manager', '2026-09-28'),
     ('JSAN384', 'Manikanta Sai Mahesh', 'Vanumu', 'msvanumu@jsanconsulting.com', 'GIS', 'Trainee', '2026-10-01'),
+    ('JSAN339', 'Manas Kumar', 'Nayak', 'mknayak@jsanconsulting.com', 'GIS', 'Assistant Vice President - Telecom', '2026-06-01'),
+    ('JSAN351', 'Mohanraj', 'Annadurai', 'mraj@jsanconsulting.com', 'GIS', 'Team Lead', '2026-07-01'),
 ]
 
 
