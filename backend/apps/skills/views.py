@@ -10,6 +10,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +19,7 @@ from apps.employees.models import Employee
 
 from .cycles import active_cycle, cycles_for, compliance_of
 from .export import build_workbook
+from .import_calendar import import_calendar
 from .models import SkillDefinition, ReviewCycle, SkillSubmission, SUBMISSION_STATUS
 from .serializers import (
     SkillDefinitionSerializer, ReviewCycleSerializer, SkillSubmissionSerializer,
@@ -276,6 +278,28 @@ class CycleDetailView(APIView):
     def delete(self, request, pk):
         ReviewCycle.objects.filter(pk=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CalendarImportView(APIView):
+    """POST /api/skills/cycles/import/ — upload a review-calendar CSV/XLSX (staff).
+    Upserts cycles by Cycle ID; returns {imported, skipped[]}."""
+    permission_classes = [IsSkillsStaff]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        f = request.FILES.get('file')
+        if not f:
+            return Response({'detail': 'Please choose a file to upload.'}, status=status.HTTP_400_BAD_REQUEST)
+        if f.size > 5 * 1024 * 1024:
+            return Response({'detail': 'File is too large (max 5 MB).'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = import_calendar(f.name, f.read())
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:  # noqa: BLE001
+            return Response({'detail': 'Could not read the file. Please check the format.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
 
 
 class StaffSubmissionsView(APIView):

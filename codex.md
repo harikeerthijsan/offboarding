@@ -105,3 +105,11 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - Added `id` to the cycles_for output (`backend/apps/skills/cycles.py`) and to the CycleRow type so the manager can edit/delete; routed `/skills/cycles` and added a Review Cycles sidebar sub-item (HR/ADMIN).
 - Added backend tests for Phase 3 (cycle CRUD, export xlsx, staff submissions filters, permission gates).
 - Validation: 18/18 skills tests pass; Django check clean; frontend tsc + vite build clean.
+
+## 2026-10-13 — Skills Hub review-calendar import
+
+- Added `backend/apps/skills/import_calendar.py` (ported from lib/import.ts detectCalendar): parses CSV/XLSX, fuzzy header detection, date parsing (01-Oct-2026 / ISO / Excel serial), upserts ReviewCycle by Cycle ID, reports skipped rows.
+- Added `CalendarImportView` (POST /api/skills/cycles/import/, staff, multipart, 5MB cap) + URL.
+- Frontend: "Import Calendar" button + modal on `SkillsCyclesPage.tsx`; `importCalendar` in skillsService.
+- Added 4 backend tests (upsert + skip bad rows, idempotent re-import, employee 403, no-cycle-id 400).
+- Validation: 22/22 skills tests pass; Django check clean; frontend tsc + vite build clean.

@@ -27,6 +27,13 @@ export default function SkillsCyclesPage() {
   const [expCycle, setExpCycle] = useState('');
   const [exporting, setExporting] = useState(false);
 
+  // import
+  const [showImport, setShowImport] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importErr, setImportErr] = useState('');
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: string[] } | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try { setCycles((await skillsService.cycles()).cycles); }
@@ -74,6 +81,21 @@ export default function SkillsCyclesPage() {
     catch { setError('Delete failed.'); }
   }
 
+  async function runImport(e: React.FormEvent) {
+    e.preventDefault();
+    setImportErr(''); setImportResult(null);
+    if (!importFile) { setImportErr('Choose a CSV or Excel file.'); return; }
+    setImporting(true);
+    try {
+      const res = await skillsService.importCalendar(importFile);
+      setImportResult(res);
+      await load();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { detail?: string } } };
+      setImportErr(ax.response?.data?.detail || 'Import failed.');
+    } finally { setImporting(false); }
+  }
+
   async function exportXlsx() {
     setExporting(true); setError('');
     try {
@@ -100,7 +122,12 @@ export default function SkillsCyclesPage() {
           <h1 className="page-title">Review Cycles</h1>
           <p className="page-subtitle">Manage the six-month review calendar and export the skill matrix</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}><Icon name="plus" size={16} /> Add Cycle</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-secondary" onClick={() => { setShowImport(true); setImportResult(null); setImportErr(''); setImportFile(null); setMsg(''); }}>
+            <Icon name="file" size={15} /> Import Calendar
+          </button>
+          <button className="btn btn-primary" onClick={openCreate}><Icon name="plus" size={16} /> Add Cycle</button>
+        </div>
       </div>
 
       {msg && <div className="alert" style={{ marginBottom: 16, background: '#ecfdf5', color: '#047857' }}>{msg}</div>}
@@ -201,6 +228,46 @@ export default function SkillsCyclesPage() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)} disabled={busy}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : (editId ? 'Save' : 'Create')}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import calendar modal */}
+      {showImport && (
+        <div className="modal-overlay" onClick={() => !importing && setShowImport(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <div className="modal-header"><h3>Import Review Calendar</h3></div>
+            <form onSubmit={runImport}>
+              <div className="modal-body">
+                {importErr && <div className="error-message" style={{ marginBottom: 12 }}>{importErr}</div>}
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                  Upload a CSV or Excel file with columns: <b>Cycle ID, Period Start, Period End,
+                  Employee Update Due, Manager Validation Due, Closure Target</b> (Notes optional).
+                  Existing cycles are updated by Cycle ID.
+                </p>
+                <div className="form-group">
+                  <label className="form-label">File <span style={{ color: 'var(--text-muted)' }}>(.csv / .xlsx)</span></label>
+                  <input type="file" className="form-input" accept=".csv,.xlsx,.xls"
+                    onChange={e => setImportFile(e.target.files?.[0] ?? null)} />
+                </div>
+                {importResult && (
+                  <div className="alert" style={{ background: '#ecfdf5', color: '#047857', padding: 12, borderRadius: 8 }}>
+                    <b>{importResult.imported} cycle(s) imported.</b>
+                    {importResult.skipped.length > 0 && (
+                      <ul style={{ margin: '8px 0 0 18px', fontSize: 13, color: 'var(--warning)' }}>
+                        {importResult.skipped.map((s, i) => <li key={i}>{s}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowImport(false)} disabled={importing}>Close</button>
+                <button type="submit" className="btn btn-primary" disabled={importing || !importFile}>
+                  {importing ? 'Importing…' : 'Import'}
+                </button>
               </div>
             </form>
           </div>

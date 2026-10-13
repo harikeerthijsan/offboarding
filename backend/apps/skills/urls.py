@@ -7,6 +7,7 @@ urlpatterns = [
     path('submissions/all/', views.StaffSubmissionsView.as_view(), name='skills-submissions-all'),
     path('picker/', views.SkillsPickerView.as_view(), name='skills-picker'),
     path('cycles/', views.CyclesView.as_view(), name='skills-cycles'),
+    path('cycles/import/', views.CalendarImportView.as_view(), name='skills-cycles-import'),
     path('cycles/<int:pk>/', views.CycleDetailView.as_view(), name='skills-cycle-detail'),
     path('catalogue/', views.CatalogueView.as_view(), name='skills-catalogue'),
     path('catalogue/<int:pk>/', views.CatalogueDetailView.as_view(), name='skills-catalogue-detail'),

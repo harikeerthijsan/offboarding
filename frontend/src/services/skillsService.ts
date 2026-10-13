@@ -49,6 +49,14 @@ export const skillsService = {
   deleteCycle: async (id: number): Promise<void> => {
     await api.delete(`/skills/cycles/${id}/`);
   },
+  importCalendar: async (file: File): Promise<{ imported: number; skipped: string[] }> => {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await api.post('/skills/cycles/import/', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
 
   // Excel export (staff). Returns the URL; caller fetches with the auth header.
   exportUrl: (params?: { status?: string; cycle?: string }): string => {

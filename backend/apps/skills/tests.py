@@ -1,5 +1,6 @@
 import datetime
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -173,3 +174,42 @@ class ExportTest(SkillsSetup):
     def test_employee_cannot_export(self):
         auth(self.client, self.emp_user)
         self.assertEqual(self.client.get('/api/skills/export/').status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CalendarImportTest(SkillsSetup):
+    CSV = (
+        b'Cycle ID,Period Start,Period End,Employee Update Due,Manager Validation Due,Closure Target,Notes\n'
+        b'2099-H1,01-Jan-2099,30-Jun-2099,15-Feb-2099,28-Feb-2099,15-Mar-2099,first\n'
+        b'2099-H2,2099-07-01,2099-12-31,2099-08-15,2099-08-31,2099-09-15,\n'
+        b'BADROW,01-Jan-2099,,15-Feb-2099,28-Feb-2099,15-Mar-2099,missing end\n'
+    )
+
+    def _file(self, name='calendar.csv', content=None):
+        return SimpleUploadedFile(name, content or self.CSV, content_type='text/csv')
+
+    def test_staff_import_upserts_and_skips_bad_rows(self):
+        auth(self.client, self.hr)
+        r = self.client.post('/api/skills/cycles/import/', {'file': self._file()}, format='multipart')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['imported'], 2)
+        self.assertEqual(len(r.data['skipped']), 1)
+        c = ReviewCycle.objects.get(cycle_id='2099-H1')
+        self.assertEqual(c.period_start, datetime.date(2099, 1, 1))
+        self.assertEqual(c.notes, 'first')
+
+    def test_reimport_is_idempotent(self):
+        auth(self.client, self.hr)
+        self.client.post('/api/skills/cycles/import/', {'file': self._file()}, format='multipart')
+        self.client.post('/api/skills/cycles/import/', {'file': self._file()}, format='multipart')
+        self.assertEqual(ReviewCycle.objects.filter(cycle_id__startswith='2099').count(), 2)
+
+    def test_employee_cannot_import(self):
+        auth(self.client, self.emp_user)
+        r = self.client.post('/api/skills/cycles/import/', {'file': self._file()}, format='multipart')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_file_without_cycle_id_rejected(self):
+        auth(self.client, self.hr)
+        bad = self._file('x.csv', b'foo,bar\n1,2\n')
+        r = self.client.post('/api/skills/cycles/import/', {'file': bad}, format='multipart')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
