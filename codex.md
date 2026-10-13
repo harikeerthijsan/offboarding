@@ -148,3 +148,8 @@ This file tracks changes made by Codex from 2026-10-12 onward. Future file-chang
 - JSAN215 / JSAN016 / JSAN159 are rehire duplicates: the real email is correctly held by the active record (JSAN278 / JSAN291 / JSAN303). Gave the old exited record a unique plus-addressed variant (e.g. avelmarthi+jsan215@jsanconsulting.com) so it leaves .local without touching the active login.
 - JSAN294 (Pulluru Vinay Kumar) was blank in the workbook; derived vpulluru@jsanconsulting.com (verified free).
 - Baked all four into sync_exit_emails ROSTER. Local run: 4 updated, 61 skipped (already correct), 0 conflicts; no exited employee remains on @jsan.local.
+
+## 2026-10-13 — set_role command + JSAN252 admin
+
+- Added `backend/apps/accounts/management/commands/set_role.py`: set a user's role by employee ID or email (argument-only, so it runs cleanly over railway ssh).
+- Set JSAN252 (Satish V) to ADMIN locally; will apply on live.
