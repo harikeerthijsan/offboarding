@@ -21,7 +21,13 @@ function TypeBadge({ type }: { type: EmploymentType }) {
 
 function formatDate(d: string) {
   if (!d) return '—';
-  try { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
+  try {
+    // Date-only strings (YYYY-MM-DD) must be parsed as local, not UTC,
+    // otherwise toLocaleDateString shifts them a day in non-UTC timezones.
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    const date = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(d);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
   catch { return d; }
 }
 
