@@ -402,6 +402,36 @@ class EmployeeTest(BaseTestCase):
         self.assertIn('Completed', row)
         self.assertIn('2026-03-15', row)
 
+    def test_export_active_only_omits_offboarding_columns(self):
+        self._create_employee(self.employee_user, 'EMP710')  # active by default
+        self.auth(self.hr_user)
+        body = self.client.get(f'{self.list_url}export/?status=ACTIVE').content.decode('utf-8')
+        header = body.splitlines()[0]
+        # offboarding columns dropped, personal + skills present
+        for col in ['Exit Date', 'Exit Interview', 'IT Clearance', 'Overall Clearance']:
+            self.assertNotIn(col, header)
+        for col in ['Phone', 'Date of Birth', 'Emergency Contact Name', 'Skills']:
+            self.assertIn(col, header)
+
+    def test_export_dashes_blank_personal_fields(self):
+        self._create_employee(self.employee_user, 'EMP711')  # phone/dob/etc left blank
+        self.auth(self.hr_user)
+        body = self.client.get(f'{self.list_url}export/?status=ACTIVE').content.decode('utf-8')
+        row = [line for line in body.splitlines() if line.startswith('EMP711')][0]
+        # blank phone renders as a dash
+        self.assertIn('-', row.split(',')[3])
+
+    def test_export_hides_sensitive_columns_from_manager(self):
+        self._create_employee(self.employee_user, 'EMP712')
+        self.auth(self.manager_user)
+        header = self.client.get(f'{self.list_url}export/').content.decode('utf-8').splitlines()[0]
+        for col in ['Aadhaar Number', 'PAN Number', 'Bank Account Number']:
+            self.assertNotIn(col, header)
+        # HR still gets them
+        self.auth(self.hr_user)
+        header_hr = self.client.get(f'{self.list_url}export/').content.decode('utf-8').splitlines()[0]
+        self.assertIn('Aadhaar Number', header_hr)
+
     def test_employee_cannot_create_employee(self):
         self.auth(self.employee_user)
         data = {

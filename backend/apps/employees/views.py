@@ -199,81 +199,133 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         department, etc.) — same filtering as the list view. e.g.
         /api/employees/export/?status=ACTIVE
 
-        Includes each employee's clearance status (KT, IT, Finance, HR, Admin,
-        Manager and overall) drawn from their most recent offboarding."""
+        Columns:
+          * Personal details for every employee (blank fields render as '-').
+          * Sensitive statutory/bank columns only for HR/ADMIN exporters.
+          * Each employee's latest submitted skills.
+          * Offboarding columns (exit date, exit interview, clearances) only when
+            NOT exporting Active-only, and dashed out for any Active employee.
+        """
         from apps.offboarding.models import ExitInterview, ResignationRequest, DepartmentClearance
+        from apps.skills.models import SkillSubmission
+
         qs = list(self.get_queryset())
-        status_label = (request.query_params.get('status') or 'all').lower()
+        status_filter = (request.query_params.get('status') or '').upper()
+        status_label = status_filter.lower() or 'all'
+        active_only = status_filter == 'ACTIVE'
+        include_sensitive = request.user.role in ('HR', 'ADMIN')
 
-        # employee_id -> exit interview status (single query)
-        ei_map = {ei.employee_id: ei.get_status_display()
-                  for ei in ExitInterview.objects.all()}
+        def d(v):
+            """Render a cell: non-empty value, else a '-' dash."""
+            s = '' if v is None else str(v).strip()
+            return s if s else '-'
 
-        # employee_id -> most recent offboarding request (with notice period prefetched)
-        latest_offboarding = {}
-        for r in (ResignationRequest.objects
-                  .filter(employee__in=qs)
-                  .select_related('notice_period')
-                  .order_by('employee_id', '-created_at')):
-            latest_offboarding.setdefault(r.employee_id, r)
+        # user_id -> latest submitted/saved skills (most recent submission wins)
+        latest_sub = {}
+        user_ids = [e.user_id for e in qs if e.user_id]
+        for s in SkillSubmission.objects.filter(user_id__in=user_ids).order_by('updated_at'):
+            latest_sub[s.user_id] = s
+
+        def skills_cell(employee):
+            sub = latest_sub.get(employee.user_id)
+            if not sub or not sub.skills:
+                return '-'
+            parts = []
+            for sk in sub.skills:
+                name = str(sk.get('name') or '').strip()
+                if not name:
+                    continue
+                extra = []
+                if sk.get('proficiency'):
+                    extra.append(str(sk['proficiency']))
+                yrs = sk.get('years')
+                if yrs not in (None, '', 0):
+                    extra.append(f"{yrs}y")
+                parts.append(f"{name} ({', '.join(extra)})" if extra else name)
+            return '; '.join(parts) or '-'
+
+        # ─ offboarding data (only needed when offboarding columns are shown) ─
+        ei_map, latest_offboarding, dc_map = {}, {}, {}
+        if not active_only:
+            ei_map = {ei.employee_id: ei.get_status_display() for ei in ExitInterview.objects.all()}
+            for r in (ResignationRequest.objects.filter(employee__in=qs)
+                      .select_related('notice_period').order_by('employee_id', '-created_at')):
+                latest_offboarding.setdefault(r.employee_id, r)
+            res_ids = [r.id for r in latest_offboarding.values()]
+            for dc in DepartmentClearance.objects.filter(offboarding_request_id__in=res_ids):
+                dc_map.setdefault(dc.offboarding_request_id, {})[dc.department] = dc.get_status_display()
 
         def exit_date(employee):
-            """Best available last-working-day for the employee's latest offboarding:
-            actual > expected (notice period) > resignation's last working date."""
             off = latest_offboarding.get(employee.id)
             if not off:
                 return ''
             np = getattr(off, 'notice_period', None)
-            d = (getattr(np, 'actual_last_working_day', None)
-                 or getattr(np, 'expected_last_working_day', None)
-                 or off.last_working_date)
-            return d.isoformat() if d else ''
+            dd = (getattr(np, 'actual_last_working_day', None)
+                  or getattr(np, 'expected_last_working_day', None)
+                  or off.last_working_date)
+            return dd.isoformat() if dd else ''
 
-        # offboarding_id -> {department: status display}
-        res_ids = [r.id for r in latest_offboarding.values()]
-        dc_map = {}
-        for dc in DepartmentClearance.objects.filter(offboarding_request_id__in=res_ids):
-            dc_map.setdefault(dc.offboarding_request_id, {})[dc.department] = dc.get_status_display()
-
-        def clearance_cells(employee):
+        def offboarding_cells(employee):
+            # Active employees have no offboarding context -> all dashes.
+            if employee.employment_status == 'ACTIVE':
+                return ['-'] * 9
             off = latest_offboarding.get(employee.id)
             if not off:
-                return ['—'] * 7
+                return ['-'] * 9
             depts = dc_map.get(off.id, {})
-            kt = 'Completed' if off.kt_completed_at else 'Pending'
-            overall = 'Completed' if off.clearance_completed_at else 'Pending'
             return [
-                kt,
-                depts.get('IT', '—'),
-                depts.get('FINANCE', '—'),
-                depts.get('HR', '—'),
-                depts.get('ADMIN', '—'),
-                depts.get('MANAGER', '—'),
-                overall,
+                d(exit_date(employee)),
+                d(ei_map.get(employee.id)),
+                'Completed' if off.kt_completed_at else 'Pending',
+                d(depts.get('IT')), d(depts.get('FINANCE')), d(depts.get('HR')),
+                d(depts.get('ADMIN')), d(depts.get('MANAGER')),
+                'Completed' if off.clearance_completed_at else 'Pending',
             ]
+
+        headers = ['Employee ID', 'Name', 'Email', 'Phone', 'Date of Birth', 'Gender',
+                   'Department', 'Designation', 'Manager', 'Employment Type', 'Status',
+                   'Location', 'Address', 'Emergency Contact Name', 'Emergency Contact Phone']
+        if include_sensitive:
+            headers += ['Aadhaar Number', 'PAN Number', 'UAN Number', 'ESI Number',
+                        'Bank Name', 'Bank Account Holder', 'Bank Account Number', 'Bank IFSC']
+        headers += ['Joining Date', 'Skills']
+        if not active_only:
+            headers += ['Exit Date', 'Exit Interview', 'Knowledge Transfer',
+                        'IT Clearance', 'Finance Clearance', 'HR Clearance',
+                        'Admin Clearance', 'Manager Clearance', 'Overall Clearance']
 
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="employees_{status_label}.csv"'
         writer = csv.writer(response)
-        writer.writerow(['Employee ID', 'Name', 'Email', 'Department', 'Designation',
-                         'Manager', 'Status', 'Joining Date', 'Exit Date', 'Exit Interview',
-                         'Knowledge Transfer', 'IT Clearance', 'Finance Clearance',
-                         'HR Clearance', 'Admin Clearance', 'Manager Clearance',
-                         'Overall Clearance'])
+        writer.writerow(headers)
         for e in qs:
-            writer.writerow([
-                e.employee_id,
-                f"{e.first_name} {e.last_name}".strip(),
-                e.email,
-                e.department.name if e.department else '',
-                e.designation.name if e.designation else '',
-                f"{e.manager.first_name} {e.manager.last_name}".strip() if e.manager else '',
-                e.get_employment_status_display(),
-                e.joining_date.isoformat() if e.joining_date else '',
-                exit_date(e),
-                ei_map.get(e.id, 'Not Started'),
-                *clearance_cells(e),
-            ])
+            row = [
+                d(e.employee_id),
+                d(f"{e.first_name} {e.last_name}".strip()),
+                d(e.email),
+                d(e.phone),
+                d(e.date_of_birth.isoformat() if e.date_of_birth else ''),
+                d(e.get_gender_display() if e.gender else ''),
+                d(e.department.name if e.department else ''),
+                d(e.designation.name if e.designation else ''),
+                d(f"{e.manager.first_name} {e.manager.last_name}".strip() if e.manager else ''),
+                d(e.get_employment_type_display() if e.employment_type else ''),
+                d(e.get_employment_status_display()),
+                d(e.location),
+                d(e.address),
+                d(e.emergency_contact_name),
+                d(e.emergency_contact_phone),
+            ]
+            if include_sensitive:
+                row += [
+                    d(e.aadhaar_number), d(e.pan_number), d(e.uan_number), d(e.esi_number),
+                    d(e.bank_name), d(e.bank_account_holder_name),
+                    d(e.bank_account_number), d(e.bank_ifsc_code),
+                ]
+            row += [d(e.joining_date.isoformat() if e.joining_date else ''), skills_cell(e)]
+            if not active_only:
+                row += offboarding_cells(e)
+            writer.writerow(row)
         return response
 
     @action(detail=False, methods=['get', 'patch'], url_path='me')
