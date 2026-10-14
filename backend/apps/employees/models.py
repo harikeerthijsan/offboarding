@@ -22,6 +22,20 @@ GENDER_CHOICES = [
     ('PREFER_NOT_TO_SAY', 'Prefer not to say'),
 ]
 
+MARITAL_STATUS = [
+    ('SINGLE', 'Single'),
+    ('MARRIED', 'Married'),
+    ('DIVORCED', 'Divorced'),
+    ('WIDOWED', 'Widowed'),
+]
+
+BLOOD_GROUPS = [
+    ('A+', 'A+'), ('A-', 'A-'),
+    ('B+', 'B+'), ('B-', 'B-'),
+    ('AB+', 'AB+'), ('AB-', 'AB-'),
+    ('O+', 'O+'), ('O-', 'O-'),
+]
+
 
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -83,6 +97,7 @@ class Employee(models.Model):
     profile_photo = models.ImageField(upload_to='employee_photos/', null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
+    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUPS, blank=True)
     department = models.ForeignKey(
         Department,
         on_delete=models.SET_NULL,
@@ -105,9 +120,17 @@ class Employee(models.Model):
     employment_status = models.CharField(max_length=20, choices=EMPLOYMENT_STATUS, default='ACTIVE')
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE, default='FULL_TIME')
     location = models.CharField(max_length=100, blank=True)
-    address = models.TextField(blank=True)
+    address = models.TextField(blank=True)             # present / current address
+    permanent_address = models.TextField(blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
+    # Family & background
+    father_name = models.CharField(max_length=100, blank=True)
+    marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS, blank=True)
+    spouse_name = models.CharField(max_length=100, blank=True)
+    education = models.TextField(blank=True)
+    # list of {company, role, years}
+    previous_experience = models.JSONField(default=list, blank=True)
     # Statutory / identity details (India)
     aadhaar_number = models.CharField(max_length=12, blank=True)
     pan_number = models.CharField(max_length=10, blank=True)

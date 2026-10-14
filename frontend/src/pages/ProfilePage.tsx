@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
 import { employeeService } from '../services/employeeService';
 import { useAuthContext } from '../contexts/AuthContext';
-import type { User, Employee } from '../types';
+import type { User, Employee, ExperienceItem } from '../types';
+import ExperienceEditor from '../components/ExperienceEditor';
 
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
@@ -18,9 +19,16 @@ interface PersonalForm {
   phone: string;
   date_of_birth: string;
   gender: string;
+  blood_group: string;
   address: string;
+  permanent_address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  father_name: string;
+  marital_status: string;
+  spouse_name: string;
+  education: string;
+  previous_experience: ExperienceItem[];
   aadhaar_number: string;
   pan_number: string;
   uan_number: string;
@@ -36,9 +44,16 @@ function toForm(emp: Employee): PersonalForm {
     phone: emp.phone || '',
     date_of_birth: emp.date_of_birth || '',
     gender: emp.gender || '',
+    blood_group: emp.blood_group || '',
     address: emp.address || '',
+    permanent_address: emp.permanent_address || '',
     emergency_contact_name: emp.emergency_contact_name || '',
     emergency_contact_phone: emp.emergency_contact_phone || '',
+    father_name: emp.father_name || '',
+    marital_status: emp.marital_status || '',
+    spouse_name: emp.spouse_name || '',
+    education: emp.education || '',
+    previous_experience: Array.isArray(emp.previous_experience) ? emp.previous_experience.map(x => ({ ...x })) : [],
     aadhaar_number: emp.aadhaar_number || '',
     pan_number: emp.pan_number || '',
     uan_number: emp.uan_number || '',
@@ -128,9 +143,16 @@ export default function ProfilePage() {
       phone: form.phone,
       date_of_birth: form.date_of_birth || null,
       gender: form.gender,
+      blood_group: form.blood_group,
       address: form.address,
+      permanent_address: form.permanent_address,
       emergency_contact_name: form.emergency_contact_name,
       emergency_contact_phone: form.emergency_contact_phone,
+      father_name: form.father_name,
+      marital_status: form.marital_status,
+      spouse_name: form.marital_status === 'MARRIED' ? form.spouse_name : '',
+      education: form.education,
+      previous_experience: form.previous_experience,
       aadhaar_number: form.aadhaar_number.replace(/\s/g, ''),
       pan_number: form.pan_number.toUpperCase().trim(),
       uan_number: form.uan_number.trim(),
@@ -289,7 +311,20 @@ export default function ProfilePage() {
                   <InfoField label="Phone" value={employee.phone} />
                   <InfoField label="Date of Birth" value={formatDate(employee.date_of_birth)} />
                   <InfoField label="Gender" value={employee.gender ? employee.gender.replace('_', ' ') : '—'} />
-                  <InfoField label="Address" value={employee.address} />
+                  <InfoField label="Blood Group" value={employee.blood_group} />
+                  <InfoField label="Father's Name" value={employee.father_name} />
+                  <InfoField label="Marital Status" value={employee.marital_status ? employee.marital_status.charAt(0) + employee.marital_status.slice(1).toLowerCase() : '—'} />
+                  {employee.marital_status === 'MARRIED' && <InfoField label="Spouse Name" value={employee.spouse_name} />}
+                  <InfoField label="Present Address" value={employee.address} />
+                  <InfoField label="Permanent Address" value={employee.permanent_address} />
+                  <InfoField label="Education" value={employee.education} />
+                  <InfoField label="Previous Experience" value={
+                    employee.previous_experience && employee.previous_experience.length
+                      ? employee.previous_experience
+                          .map(x => [x.company, x.role, x.years ? `${x.years} yr` : ''].filter(Boolean).join(' — '))
+                          .join('; ')
+                      : '—'
+                  } />
                   <InfoField label="Emergency Contact" value={employee.emergency_contact_name} />
                   <InfoField label="Emergency Phone" value={employee.emergency_contact_phone} />
                   <InfoField label="Aadhaar Number" value={employee.aadhaar_number} />
@@ -328,11 +363,57 @@ export default function ProfilePage() {
                         <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
                       </select>
                     </div>
+                    <div className="form-group">
+                      <label className="form-label">Blood Group</label>
+                      <select className="form-input" value={form.blood_group} onChange={set('blood_group')}>
+                        <option value="">Select blood group</option>
+                        {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Present Address</label>
+                      <textarea className="form-input" rows={3} value={form.address} onChange={set('address')} placeholder="Current residential address" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Permanent Address</label>
+                      <textarea className="form-input" rows={3} value={form.permanent_address} onChange={set('permanent_address')} placeholder="Permanent / home address" />
+                    </div>
+                  </div>
+
+                  <h4 className="form-section-title" style={{ fontSize: 14, marginTop: 16 }}>Family & Background</h4>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Father's Name</label>
+                      <input className="form-input" value={form.father_name} onChange={set('father_name')} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Marital Status</label>
+                      <select className="form-input" value={form.marital_status} onChange={set('marital_status')}>
+                        <option value="">Select status</option>
+                        <option value="SINGLE">Single</option>
+                        <option value="MARRIED">Married</option>
+                        <option value="DIVORCED">Divorced</option>
+                        <option value="WIDOWED">Widowed</option>
+                      </select>
+                    </div>
+                    {form.marital_status === 'MARRIED' && (
+                      <div className="form-group">
+                        <label className="form-label">Spouse Name</label>
+                        <input className="form-input" value={form.spouse_name} onChange={set('spouse_name')} />
+                      </div>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Address</label>
-                    <textarea className="form-input" rows={3} value={form.address} onChange={set('address')} placeholder="Full address" />
+                    <label className="form-label">Education</label>
+                    <textarea className="form-input" rows={2} value={form.education} onChange={set('education')} placeholder="Degrees, institutions, years…" />
                   </div>
+                  <label className="form-label" style={{ marginTop: 4 }}>Previous Experience</label>
+                  <ExperienceEditor
+                    value={form.previous_experience}
+                    onChange={items => setForm(f => (f ? { ...f, previous_experience: items } : f))}
+                  />
 
                   <h4 className="form-section-title" style={{ fontSize: 14, marginTop: 16 }}>Emergency Contact</h4>
                   <div className="form-grid">

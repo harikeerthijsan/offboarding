@@ -82,11 +82,13 @@ class EmployeeSerializer(serializers.ModelSerializer):
         model = Employee
         fields = [
             'id', 'employee_id', 'user', 'first_name', 'last_name', 'email',
-            'phone', 'profile_photo', 'date_of_birth', 'gender',
+            'phone', 'profile_photo', 'date_of_birth', 'gender', 'blood_group',
             'department', 'designation', 'manager',
             'joining_date', 'employment_status', 'employment_type',
-            'location', 'address',
+            'location', 'address', 'permanent_address',
             'emergency_contact_name', 'emergency_contact_phone',
+            'father_name', 'marital_status', 'spouse_name',
+            'education', 'previous_experience',
             'aadhaar_number', 'pan_number', 'uan_number', 'esi_number',
             'bank_name', 'bank_account_holder_name',
             'bank_account_number', 'bank_ifsc_code',
@@ -98,9 +100,29 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return obj.direct_reports.count()
 
 
+def clean_experience(value):
+    """Normalize previous_experience into a list of {company, role, years}.
+    Drops empty rows; clamps lengths. Non-list input becomes an empty list."""
+    if not isinstance(value, list):
+        return []
+    out = []
+    for item in value[:30]:
+        if not isinstance(item, dict):
+            continue
+        company = str(item.get('company') or '').strip()[:120]
+        role = str(item.get('role') or '').strip()[:120]
+        years = str(item.get('years') or '').strip()[:20]
+        if company or role or years:
+            out.append({'company': company, 'role': role, 'years': years})
+    return out
+
+
 class StatutoryFieldsMixin:
     """Shared format validation for statutory / bank fields. Blank is allowed;
     non-empty values are normalized and must match the expected format."""
+
+    def validate_previous_experience(self, value):
+        return clean_experience(value)
 
     def validate_aadhaar_number(self, value):
         value = (value or '').replace(' ', '')
@@ -158,11 +180,13 @@ class EmployeeCreateSerializer(StatutoryFieldsMixin, serializers.ModelSerializer
         fields = [
             'id', 'employee_id', 'user_id', 'role', 'password',
             'first_name', 'last_name', 'email',
-            'phone', 'date_of_birth', 'gender',
+            'phone', 'date_of_birth', 'gender', 'blood_group',
             'department_id', 'designation_id', 'manager_id',
             'joining_date', 'employment_type', 'employment_status',
-            'location', 'address',
+            'location', 'address', 'permanent_address',
             'emergency_contact_name', 'emergency_contact_phone',
+            'father_name', 'marital_status', 'spouse_name',
+            'education', 'previous_experience',
             'aadhaar_number', 'pan_number', 'uan_number', 'esi_number',
             'bank_name', 'bank_account_holder_name',
             'bank_account_number', 'bank_ifsc_code',
@@ -246,8 +270,10 @@ class EmployeeSelfUpdateSerializer(StatutoryFieldsMixin, serializers.ModelSerial
     class Meta:
         model = Employee
         fields = [
-            'phone', 'date_of_birth', 'gender', 'address',
+            'phone', 'date_of_birth', 'gender', 'blood_group', 'address', 'permanent_address',
             'emergency_contact_name', 'emergency_contact_phone',
+            'father_name', 'marital_status', 'spouse_name',
+            'education', 'previous_experience',
             'aadhaar_number', 'pan_number', 'uan_number', 'esi_number',
             'bank_name', 'bank_account_holder_name',
             'bank_account_number', 'bank_ifsc_code',

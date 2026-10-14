@@ -2,6 +2,13 @@ export type UserRole = 'EMPLOYEE' | 'MANAGER' | 'HR' | 'IT' | 'FINANCE' | 'ADMIN
 export type EmploymentStatus = 'ACTIVE' | 'OFFBOARDING' | 'EXITED';
 export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN';
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+export type MaritalStatus = 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED';
+
+export interface ExperienceItem {
+  company: string;
+  role: string;
+  years: string;
+}
 
 export interface User {
   id: number;
@@ -89,6 +96,7 @@ export interface Employee {
   profile_photo: string | null;
   date_of_birth: string | null;
   gender: Gender | '';
+  blood_group: string;
   department: Department | null;
   designation: Designation | null;
   manager: ManagerBrief | null;
@@ -97,8 +105,14 @@ export interface Employee {
   employment_type: EmploymentType;
   location: string;
   address: string;
+  permanent_address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  father_name: string;
+  marital_status: MaritalStatus | '';
+  spouse_name: string;
+  education: string;
+  previous_experience: ExperienceItem[];
   aadhaar_number: string;
   pan_number: string;
   uan_number: string;

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { employeeService } from '../services/employeeService';
-import type { Department, Designation, Employee } from '../types';
+import type { Department, Designation, Employee, ExperienceItem } from '../types';
+import ExperienceEditor from '../components/ExperienceEditor';
 
 interface FormData {
   employee_id: string;
@@ -13,6 +14,7 @@ interface FormData {
   phone: string;
   date_of_birth: string;
   gender: string;
+  blood_group: string;
   department_id: string;
   designation_id: string;
   manager_id: string;
@@ -21,8 +23,14 @@ interface FormData {
   employment_status: string;
   location: string;
   address: string;
+  permanent_address: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+  father_name: string;
+  marital_status: string;
+  spouse_name: string;
+  education: string;
+  previous_experience: ExperienceItem[];
   aadhaar_number: string;
   pan_number: string;
   uan_number: string;
@@ -36,10 +44,11 @@ interface FormData {
 const emptyForm: FormData = {
   employee_id: '', role: 'EMPLOYEE', password: '',
   first_name: '', last_name: '', email: '', phone: '',
-  date_of_birth: '', gender: '', department_id: '', designation_id: '',
+  date_of_birth: '', gender: '', blood_group: '', department_id: '', designation_id: '',
   manager_id: '', joining_date: '', employment_type: 'FULL_TIME',
-  employment_status: 'ACTIVE', location: '', address: '',
+  employment_status: 'ACTIVE', location: '', address: '', permanent_address: '',
   emergency_contact_name: '', emergency_contact_phone: '',
+  father_name: '', marital_status: '', spouse_name: '', education: '', previous_experience: [],
   aadhaar_number: '', pan_number: '', uan_number: '', esi_number: '',
   bank_name: '', bank_account_holder_name: '', bank_account_number: '', bank_ifsc_code: '',
 };
@@ -74,6 +83,7 @@ export default function EmployeeFormPage() {
           phone: emp.phone || '',
           date_of_birth: emp.date_of_birth || '',
           gender: emp.gender || '',
+          blood_group: emp.blood_group || '',
           department_id: emp.department?.id?.toString() || '',
           designation_id: emp.designation?.id?.toString() || '',
           manager_id: emp.manager?.id?.toString() || '',
@@ -82,8 +92,14 @@ export default function EmployeeFormPage() {
           employment_status: emp.employment_status,
           location: emp.location || '',
           address: emp.address || '',
+          permanent_address: emp.permanent_address || '',
           emergency_contact_name: emp.emergency_contact_name || '',
           emergency_contact_phone: emp.emergency_contact_phone || '',
+          father_name: emp.father_name || '',
+          marital_status: emp.marital_status || '',
+          spouse_name: emp.spouse_name || '',
+          education: emp.education || '',
+          previous_experience: Array.isArray(emp.previous_experience) ? emp.previous_experience.map(x => ({ ...x })) : [],
           aadhaar_number: emp.aadhaar_number || '',
           pan_number: emp.pan_number || '',
           uan_number: emp.uan_number || '',
@@ -142,6 +158,7 @@ export default function EmployeeFormPage() {
       phone: form.phone || '',
       date_of_birth: form.date_of_birth || null,
       gender: form.gender || '',
+      blood_group: form.blood_group || '',
       department_id: form.department_id ? Number(form.department_id) : null,
       designation_id: form.designation_id ? Number(form.designation_id) : null,
       manager_id: form.manager_id ? Number(form.manager_id) : null,
@@ -150,8 +167,14 @@ export default function EmployeeFormPage() {
       employment_status: form.employment_status,
       location: form.location || '',
       address: form.address || '',
+      permanent_address: form.permanent_address || '',
       emergency_contact_name: form.emergency_contact_name || '',
       emergency_contact_phone: form.emergency_contact_phone || '',
+      father_name: form.father_name || '',
+      marital_status: form.marital_status || '',
+      spouse_name: form.marital_status === 'MARRIED' ? form.spouse_name : '',
+      education: form.education || '',
+      previous_experience: form.previous_experience,
       aadhaar_number: form.aadhaar_number.replace(/\s/g, '') || '',
       pan_number: form.pan_number.toUpperCase().trim() || '',
       uan_number: form.uan_number.trim() || '',
@@ -248,6 +271,13 @@ export default function EmployeeFormPage() {
                 <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
               </select>
             </div>
+            <div className="form-group">
+              <label className="form-label">Blood Group</label>
+              <select className="form-input" value={form.blood_group} onChange={set('blood_group')}>
+                <option value="">Select blood group</option>
+                {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -333,10 +363,51 @@ export default function EmployeeFormPage() {
               <input className="form-input" value={form.location} onChange={set('location')} placeholder="City, Office" />
             </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Address</label>
-            <textarea className="form-input" rows={3} value={form.address} onChange={set('address')} placeholder="Full address" />
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Present Address</label>
+              <textarea className="form-input" rows={3} value={form.address} onChange={set('address')} placeholder="Current residential address" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Permanent Address</label>
+              <textarea className="form-input" rows={3} value={form.permanent_address} onChange={set('permanent_address')} placeholder="Permanent / home address" />
+            </div>
           </div>
+        </div>
+
+        <div className="form-section">
+          <h3 className="form-section-title">Family & Background</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Father's Name</label>
+              <input className="form-input" value={form.father_name} onChange={set('father_name')} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Marital Status</label>
+              <select className="form-input" value={form.marital_status} onChange={set('marital_status')}>
+                <option value="">Select status</option>
+                <option value="SINGLE">Single</option>
+                <option value="MARRIED">Married</option>
+                <option value="DIVORCED">Divorced</option>
+                <option value="WIDOWED">Widowed</option>
+              </select>
+            </div>
+            {form.marital_status === 'MARRIED' && (
+              <div className="form-group">
+                <label className="form-label">Spouse Name</label>
+                <input className="form-input" value={form.spouse_name} onChange={set('spouse_name')} />
+              </div>
+            )}
+          </div>
+          <div className="form-group">
+            <label className="form-label">Education</label>
+            <textarea className="form-input" rows={2} value={form.education} onChange={set('education')} placeholder="Degrees, institutions, years…" />
+          </div>
+          <label className="form-label" style={{ marginTop: 4 }}>Previous Experience</label>
+          <ExperienceEditor
+            value={form.previous_experience}
+            onChange={items => setForm(f => ({ ...f, previous_experience: items }))}
+          />
         </div>
 
         {!isEdit && (
