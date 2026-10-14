@@ -266,9 +266,6 @@ export default function DashboardPage() {
         </div>
         <div className="dash-welcome-actions">
           <span className="date-chip"><Icon name="calendar" size={15} /> {today}</span>
-          <button className="btn btn-primary" onClick={() => navigate('/offboarding/create')}>
-            <Icon name="plus" size={16} /> New Offboarding
-          </button>
         </div>
       </div>
 
@@ -372,7 +369,6 @@ export default function DashboardPage() {
         <div className="card">
           <h3>Quick Actions</h3>
           <div className="qa-grid">
-            <button className="qa-btn qa-blue" onClick={() => navigate('/offboarding/create')}><Icon name="plus" size={18} /> New Offboarding</button>
             <button className="qa-btn qa-green" onClick={() => navigate('/offboarding')}><Icon name="file" size={18} /> Generate Document</button>
             <button className="qa-btn qa-rose" onClick={() => navigate('/employees')}><Icon name="users" size={18} /> Manage Employees</button>
             <button className="qa-btn qa-amber" onClick={() => navigate('/hr/offboarding')}><Icon name="bar-chart" size={18} /> View Reports</button>

@@ -283,8 +283,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             ]
 
         headers = ['Employee ID', 'Name', 'Email', 'Phone', 'Date of Birth', 'Gender',
-                   'Department', 'Designation', 'Manager', 'Employment Type', 'Status',
-                   'Location', 'Address', 'Emergency Contact Name', 'Emergency Contact Phone']
+                   'Blood Group', 'Department', 'Designation', 'Manager',
+                   'Employment Type', 'Status', 'Location',
+                   'Present Address', 'Permanent Address',
+                   'Father Name', 'Marital Status', 'Spouse Name', 'Education',
+                   'Emergency Contact Name', 'Emergency Contact Phone']
         if include_sensitive:
             headers += ['Aadhaar Number', 'PAN Number', 'UAN Number', 'ESI Number',
                         'Bank Name', 'Bank Account Holder', 'Bank Account Number', 'Bank IFSC']
@@ -306,6 +309,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 d(e.phone),
                 d(e.date_of_birth.isoformat() if e.date_of_birth else ''),
                 d(e.get_gender_display() if e.gender else ''),
+                d(e.blood_group),
                 d(e.department.name if e.department else ''),
                 d(e.designation.name if e.designation else ''),
                 d(f"{e.manager.first_name} {e.manager.last_name}".strip() if e.manager else ''),
@@ -313,6 +317,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 d(e.get_employment_status_display()),
                 d(e.location),
                 d(e.address),
+                d(e.permanent_address),
+                d(e.father_name),
+                d(e.get_marital_status_display() if e.marital_status else ''),
+                d(e.spouse_name),
+                d(e.education),
                 d(e.emergency_contact_name),
                 d(e.emergency_contact_phone),
             ]
