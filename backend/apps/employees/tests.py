@@ -468,6 +468,15 @@ class EmployeeTest(BaseTestCase):
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_it_user_can_list_employees_for_asset_assignment(self):
+        it_user = User.objects.create_user(
+            email='it@example.com', username='ituser', password='pass', role='IT',
+        )
+        self._create_employee(self.employee_user, 'EMP003')
+        self.auth(it_user)
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     # -- Phase 2 tests --
 
     def test_create_employee_with_new_fields(self):

@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsAdmin, IsHR, IsManager
+from apps.accounts.permissions import IsAdmin, IsHR, IsManager, IsManagerOrIT
 from apps.audit.utils import log_action
 from .models import Department, Designation, Employee
 from .serializers import (
@@ -161,7 +161,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if self.action in ('create', 'update', 'partial_update'):
             return [IsHR()]
         if self.action in ('list', 'retrieve', 'export'):
-            return [IsManager()]
+            return [IsManagerOrIT()]
         if self.action in ('me', 'reports', 'manager_info'):
             return [IsAuthenticated()]
         return [IsAuthenticated()]

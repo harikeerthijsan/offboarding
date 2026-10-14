@@ -20,3 +20,11 @@ class IsManager(BasePermission):
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role in ('MANAGER', 'HR', 'ADMIN')
+
+
+class IsManagerOrIT(BasePermission):
+    """Read access for MANAGER, HR, ADMIN — plus IT, which needs the
+    employee roster to assign/unassign company assets."""
+
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ('MANAGER', 'HR', 'ADMIN', 'IT')

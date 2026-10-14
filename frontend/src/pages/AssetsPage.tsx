@@ -52,7 +52,9 @@ export default function AssetsPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     if (canManage) {
-      employeeService.getEmployees({ page_size: 200 }).then(r => setEmployees(r.results)).catch(() => {});
+      employeeService.getEmployees({ page_size: 200 })
+        .then(r => setEmployees(r.results))
+        .catch(() => setError('Could not load the employee list for assignment.'));
     }
   }, [canManage]);
 
