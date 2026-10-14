@@ -1,3 +1,6 @@
+import csv
+import io
+
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -166,6 +169,96 @@ class AssetDetailView(APIView):
         log_action(actor=request.user, action=action, target_obj=asset,
                    changes=serializer.validated_data, request=request)
         return Response(AssetSerializer(asset).data)
+
+
+class AssetImportView(APIView):
+    """POST /api/assets/import/  — bulk-create assets from a CSV upload (IT/Admin).
+
+    Expected columns (header row, case-insensitive):
+        asset_id (required), asset_name (required), asset_type, serial_number,
+        description, assigned_to_employee_id, assigned_date (YYYY-MM-DD),
+        condition, remarks
+    Rows whose asset_id already exists (in the DB or earlier in the file) are
+    skipped. Returns a per-row summary: {created, skipped, errors}.
+    """
+    permission_classes = [IsAuthenticated]
+    REQUIRED_HEADERS = {'asset_id', 'asset_name'}
+
+    def post(self, request):
+        if request.user.role not in ('IT', 'ADMIN'):
+            return Response({'detail': 'Only IT or Admin can import assets.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'detail': 'No file uploaded. Attach a CSV file as "file".'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            raw = upload.read().decode('utf-8-sig')
+        except UnicodeDecodeError:
+            return Response({'detail': 'File must be a UTF-8 encoded CSV.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        reader = csv.DictReader(io.StringIO(raw))
+        if not reader.fieldnames:
+            return Response({'detail': 'The CSV has no header row.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        headers = {(h or '').strip().lower() for h in reader.fieldnames}
+        missing = self.REQUIRED_HEADERS - headers
+        if missing:
+            return Response(
+                {'detail': f'Missing required column(s): {", ".join(sorted(missing))}.'},
+                status=status.HTTP_400_BAD_REQUEST)
+
+        created, skipped, errors = 0, 0, []
+        existing_ids = set(Asset.objects.values_list('asset_id', flat=True))
+        seen_in_file = set()
+
+        for line_no, row in enumerate(reader, start=2):  # row 1 is the header
+            r = {(k or '').strip().lower(): (v or '').strip() for k, v in row.items()}
+            if not any(r.values()):
+                continue  # ignore fully blank lines
+            asset_id = r.get('asset_id', '')
+            if not asset_id:
+                errors.append({'row': line_no, 'asset_id': '', 'message': 'asset_id is required.'})
+                continue
+            if asset_id in existing_ids or asset_id in seen_in_file:
+                skipped += 1
+                continue
+
+            data = {
+                'asset_id': asset_id,
+                'asset_type': (r.get('asset_type') or 'OTHER').upper(),
+                'asset_name': r.get('asset_name', ''),
+                'serial_number': r.get('serial_number', ''),
+                'description': r.get('description', ''),
+                'condition': (r.get('condition') or '').upper(),
+                'remarks': r.get('remarks', ''),
+                'assigned_date': r.get('assigned_date') or None,
+            }
+            emp_code = r.get('assigned_to_employee_id') or r.get('employee_id') or ''
+            if emp_code:
+                emp = Employee.objects.filter(employee_id=emp_code).first()
+                if not emp:
+                    errors.append({'row': line_no, 'asset_id': asset_id,
+                                   'message': f'No employee with ID "{emp_code}".'})
+                    continue
+                data['assigned_to'] = emp.pk
+
+            serializer = AssetCreateSerializer(data=data)
+            if not serializer.is_valid():
+                msg = '; '.join(f'{k}: {v[0]}' for k, v in serializer.errors.items())
+                errors.append({'row': line_no, 'asset_id': asset_id, 'message': msg})
+                continue
+            serializer.save()
+            created += 1
+            seen_in_file.add(asset_id)
+
+        log_action(actor=request.user, action='ASSET_IMPORTED', target_obj=None,
+                   changes={'created': created, 'skipped': skipped, 'errors': len(errors)},
+                   request=request)
+        return Response({'created': created, 'skipped': skipped, 'errors': errors},
+                        status=status.HTTP_200_OK)
 
 
 class EmployeeAssetsView(APIView):

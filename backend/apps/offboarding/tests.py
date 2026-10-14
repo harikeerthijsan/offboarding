@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -2346,6 +2347,50 @@ class DepartmentClearanceTest(ClearanceSetup):
         auth(self.client, self.employee_user)
         r = self.client.patch(f'/api/clearances/{dc_id}/',
                               {'action': 'clear', 'clearance_date': '2026-10-15'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class AssetImportTest(ClearanceSetup):
+    """CSV bulk import of assets (IT/Admin only, skips existing asset_ids)."""
+
+    def _upload(self, csv_text, user=None):
+        auth(self.client, user or self.it_user)
+        f = SimpleUploadedFile('assets.csv', csv_text.encode('utf-8'), content_type='text/csv')
+        return self.client.post('/api/assets/import/', {'file': f}, format='multipart')
+
+    def test_it_can_import_and_skips_existing(self):
+        # AST001 already exists (from setUp) and must be skipped.
+        csv_text = (
+            'asset_id,asset_type,asset_name,serial_number,assigned_to_employee_id\n'
+            'AST900,LAPTOP,ThinkPad,SN900,EMP001\n'
+            'AST001,LAPTOP,Duplicate,SNDUP,\n'
+            'AST901,MOBILE,Pixel,SN901,\n'
+        )
+        r = self._upload(csv_text)
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['created'], 2)
+        self.assertEqual(r.data['skipped'], 1)
+        self.assertEqual(r.data['errors'], [])
+        self.assertTrue(Asset.objects.filter(asset_id='AST900', assigned_to=self.employee).exists())
+        self.assertTrue(Asset.objects.filter(asset_id='AST901', assigned_to__isnull=True).exists())
+
+    def test_import_reports_unknown_employee_as_row_error(self):
+        csv_text = (
+            'asset_id,asset_name,assigned_to_employee_id\n'
+            'AST950,Mouse,NOPE999\n'
+        )
+        r = self._upload(csv_text)
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['created'], 0)
+        self.assertEqual(len(r.data['errors']), 1)
+        self.assertFalse(Asset.objects.filter(asset_id='AST950').exists())
+
+    def test_import_rejects_missing_required_column(self):
+        r = self._upload('asset_id,serial_number\nAST960,SN960\n')
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_employee_cannot_import(self):
+        r = self._upload('asset_id,asset_name\nAST970,Thing\n', user=self.employee_user)
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
 
 

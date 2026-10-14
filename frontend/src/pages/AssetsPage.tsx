@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuthContext } from '../contexts/AuthContext';
-import { clearanceService } from '../services/clearanceService';
+import { clearanceService, type AssetImportResult } from '../services/clearanceService';
 import { employeeService } from '../services/employeeService';
 import type { Asset, AssetType, AssetCondition, EmployeeListItem } from '../types';
 import { ASSET_STATUS_BADGE, ASSET_TYPES, ASSET_CONDITIONS } from '../utils/clearance';
@@ -32,6 +32,10 @@ export default function AssetsPage() {
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<AssetImportResult | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -98,6 +102,23 @@ export default function AssetsPage() {
     }
   }
 
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';  // allow re-selecting the same file later
+    if (!file) return;
+    setImporting(true); setError(''); setMsg(''); setImportResult(null);
+    try {
+      const result = await clearanceService.importAssets(file);
+      setImportResult(result);
+      setMsg(`Import finished: ${result.created} created, ${result.skipped} skipped${result.errors.length ? `, ${result.errors.length} row(s) with errors` : ''}.`);
+      await load();
+    } catch (err) {
+      setError(ktErrorMessage(err, 'Failed to import assets.'));
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -105,11 +126,49 @@ export default function AssetsPage() {
           <h1 className="page-title">{isPrivileged ? 'Assets' : 'My Assets'}</h1>
           <p className="page-subtitle">{isPrivileged ? 'Company asset catalogue and assignments.' : 'Assets currently assigned to you.'}</p>
         </div>
-        {canManage && <button className="btn btn-primary" onClick={openCreate}>+ New Asset</button>}
+        {canManage && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              style={{ display: 'none' }}
+              onChange={handleImportFile}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              title={'CSV columns: asset_id (required), asset_name (required), asset_type, '
+                + 'serial_number, description, assigned_to_employee_id, assigned_date (YYYY-MM-DD), '
+                + 'condition, remarks. Rows with an existing asset_id are skipped.'}
+            >
+              {importing ? <><span className="btn-spinner" /> Importing…</> : 'Import CSV'}
+            </button>
+            <button className="btn btn-primary" onClick={openCreate}>+ New Asset</button>
+          </div>
+        )}
       </div>
 
       {msg && <div className="alert" style={{ marginBottom: 16, background: '#ecfdf5', color: '#047857' }}>{msg}</div>}
       {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+
+      {importResult && importResult.errors.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ margin: 0 }}>Rows that could not be imported ({importResult.errors.length})</h4>
+            <button className="btn btn-ghost" onClick={() => setImportResult(null)}>Dismiss</button>
+          </div>
+          <table className="table" style={{ marginTop: 12 }}>
+            <thead><tr><th>Row</th><th>Asset ID</th><th>Reason</th></tr></thead>
+            <tbody>
+              {importResult.errors.map((er, i) => (
+                <tr key={i}><td>{er.row}</td><td>{er.asset_id || '—'}</td><td>{er.message}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isPrivileged && (
         <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>

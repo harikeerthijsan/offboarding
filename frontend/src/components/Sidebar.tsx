@@ -22,13 +22,13 @@ const ALL_NAV_ITEMS: NavItem[] = [
     path: '/employees',
     label: 'Employees',
     icon: 'users',
-    roles: ['MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
+    roles: ['ADMIN'],
   },
   {
     path: '/organization',
     label: 'Organization',
     icon: 'building',
-    roles: ['MANAGER', 'HR', 'IT', 'FINANCE', 'ADMIN'],
+    roles: ['ADMIN'],
   },
   {
     path: '/offboarding',

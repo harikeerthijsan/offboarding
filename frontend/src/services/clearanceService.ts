@@ -12,6 +12,12 @@ export interface AssetFilters {
   search?: string;
 }
 
+export interface AssetImportResult {
+  created: number;
+  skipped: number;
+  errors: { row: number; asset_id: string; message: string }[];
+}
+
 export interface ClearanceQueueRow {
   offboarding_id: number;
   department: string;
@@ -41,6 +47,16 @@ export const clearanceService = {
   },
   updateAsset: async (id: number, payload: Partial<Asset>): Promise<Asset> => {
     const { data } = await api.patch(`/assets/${id}/`, payload);
+    return data;
+  },
+  importAssets: async (file: File): Promise<AssetImportResult> => {
+    const body = new FormData();
+    body.append('file', file);
+    // Content-Type is left unset so axios derives multipart/form-data with the
+    // correct boundary from the FormData body (overriding the JSON default).
+    const { data } = await api.post('/assets/import/', body, {
+      headers: { 'Content-Type': undefined },
+    });
     return data;
   },
   employeeAssets: async (employeeId: number): Promise<Asset[]> => {
