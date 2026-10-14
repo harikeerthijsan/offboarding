@@ -150,6 +150,14 @@ class MySubmissionsView(APIView):
             sub, _ = SkillSubmission.objects.select_for_update().get_or_create(
                 user=request.user, cycle=cycle,
             )
+            if sub.status == 'approved':
+                # Already reviewed & recorded for this cycle — don't let it be
+                # silently reverted. The manager must Request update to reopen it.
+                return Response(
+                    {'detail': 'Your skills for this cycle are already approved and recorded. '
+                               'Ask your manager to request an update if changes are needed.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
             sub.skills = skills
             sub.employee_note = str(body.get('employee_note') or body.get('employeeNote') or '')[:1000]
             sub.due_date = cycle.employee_due

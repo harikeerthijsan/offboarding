@@ -146,6 +146,20 @@ class ApprovalFlowTest(SkillsSetup):
         self.assertTrue(self.Notification.objects.filter(
             recipient=self.emp_user, notification_type='SKILLS_CHANGES_REQUESTED').exists())
 
+    def test_approved_submission_cannot_be_overwritten(self):
+        self._submit()
+        sub = SkillSubmission.objects.get(user=self.emp_user)
+        auth(self.client, self.mgr_user)
+        self.client.post(f'/api/skills/submissions/{sub.pk}/review/', {'action': 'approve'}, format='json')
+        # employee tries to revert the recorded submission
+        auth(self.client, self.emp_user)
+        r = self.client.post('/api/skills/submissions/',
+                             {'submit': False, 'skills': [{'name': 'Overwrite'}]}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_409_CONFLICT)
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'approved')
+        self.assertEqual([s['name'] for s in sub.skills], ['Python'])
+
     def test_unrelated_manager_cannot_review(self):
         self._submit()
         sub = SkillSubmission.objects.get(user=self.emp_user)
