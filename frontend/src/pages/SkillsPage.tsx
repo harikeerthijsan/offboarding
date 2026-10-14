@@ -75,8 +75,6 @@ export default function SkillsPage() {
   function addRow() { setRows(rs => [...rs, blankRow()]); }
   function removeRow(i: number) { setRows(rs => rs.filter((_, idx) => idx !== i)); }
 
-  const totalYears = rows.reduce((t, r) => t + (typeof r.years === 'number' ? r.years : 0), 0);
-
   async function save(submit: boolean) {
     setError(''); setMsg('');
     const clean = rows.filter(r => r.name.trim());
@@ -223,7 +221,6 @@ export default function SkillsPage() {
       <div className="card">
         <div className="card-h-flex">
           <h3>Skill Matrix</h3>
-          <span className="muted">Total experience: <b style={{ color: 'var(--text)' }}>{totalYears} yr{totalYears === 1 ? '' : 's'}</b></span>
         </div>
 
         <div className="skills-editor">
