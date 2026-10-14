@@ -232,19 +232,20 @@ function TrendChart({ t }: { t: DashboardOverview['trends'] }) {
 
 export default function DashboardPage() {
   const { user } = useAuthContext();
-  const isEmployee = user?.role === 'EMPLOYEE';
+  // Only admins see the company-wide overview (totals, pipeline, department
+  // breakdown). Everyone else gets a personal, profile-centric dashboard.
+  const isCompanyView = user?.role === 'ADMIN';
   const navigate = useNavigate();
   const [d, setD] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(!isEmployee);
+  const [loading, setLoading] = useState(isCompanyView);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isEmployee) return;  // employees see their profile dashboard instead
+    if (!isCompanyView) return;  // non-admins see their profile dashboard instead
     dashboardService.overview().then(setD).catch(() => setError('Failed to load dashboard.')).finally(() => setLoading(false));
-  }, [isEmployee]);
+  }, [isCompanyView]);
 
-  // Plain employees get a personal, profile-centric dashboard.
-  if (isEmployee) return <EmployeeDashboard />;
+  if (!isCompanyView) return <EmployeeDashboard />;
 
   const name = user?.first_name || user?.username || 'there';
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });

@@ -5,10 +5,10 @@ import datetime
 
 from django.db.models import Q, Count
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import IsAdmin
 from apps.employees.models import Employee, Department
 from apps.audit.models import AuditLog
 
@@ -50,7 +50,9 @@ def _count_in_month(qs, field, y, m):
 
 
 class DashboardOverviewView(APIView):
-    permission_classes = [IsAuthenticated]
+    # Company-wide totals/pipeline are admin-only; everyone else uses the
+    # personal profile dashboard (no company totals).
+    permission_classes = [IsAdmin]
 
     def get(self, request):
         emp = Employee.objects.all()
