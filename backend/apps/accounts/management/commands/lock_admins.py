@@ -25,7 +25,7 @@ from apps.accounts.models import ROLE_CHOICES
 from apps.employees.models import Employee
 
 VALID_ROLES = {r for r, _ in ROLE_CHOICES}
-DEFAULT_ADMINS = ['JSAN202', 'JSAN252']
+DEFAULT_ADMINS = ['JSAN202', 'JSAN252', 'JSAN350', 'JSAN365']
 DEFAULT_KEEP = ['MANAGER', 'IT']
 
 
