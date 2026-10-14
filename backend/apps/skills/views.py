@@ -6,7 +6,9 @@ Role mapping from the source app's 3 roles to ours:
 """
 from datetime import date
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -16,6 +18,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.employees.models import Employee
+from apps.notifications.models import Notification
+from apps.notifications.emails import send_notification_email
+from django.conf import settings
+
+User = get_user_model()
 
 from .cycles import active_cycle, cycles_for, compliance_of
 from .export import build_workbook
@@ -43,6 +50,51 @@ def _employee_of(user):
 def _profile_complete(user):
     e = _employee_of(user)
     return bool(e and e.department_id and e.designation_id)
+
+
+# ─── Approval routing ────────────────────────────────────────────────────────
+
+def _manager_user_of(employee):
+    """The reporting manager's login account, or None."""
+    if not employee or not employee.manager_id:
+        return None
+    mgr = Employee.objects.filter(pk=employee.manager_id).select_related('user').first()
+    return mgr.user if (mgr and mgr.user_id) else None
+
+
+def _hr_admin_users():
+    return list(User.objects.filter(role__in=('HR', 'ADMIN')))
+
+
+def _approvers_for(employee):
+    """Who reviews this employee's submission: the reporting manager if set,
+    otherwise HR/Admin (the no-manager fallback)."""
+    mgr = _manager_user_of(employee)
+    return [mgr] if mgr else _hr_admin_users()
+
+
+def _can_review(submission, user):
+    """A reviewer is the submitter's reporting manager, or any HR/Admin."""
+    if user.role in ('HR', 'ADMIN'):
+        return True
+    emp = _employee_of(submission.user)
+    reviewer = _employee_of(user)
+    return bool(emp and reviewer and emp.manager_id == reviewer.pk)
+
+
+def _notify_skill(recipient, ntype, title, message, submission, path):
+    if not recipient:
+        return
+    Notification.objects.create(
+        recipient=recipient,
+        notification_type=ntype,
+        title=title,
+        message=message,
+        related_object_type='SkillSubmission',
+        related_object_id=submission.pk,
+    )
+    link = f"{settings.FRONTEND_URL}{path}" if getattr(settings, 'FRONTEND_URL', '') else None
+    send_notification_email(recipient, title, message, link=link)
 
 
 # ─── My skills: cycles + submissions ─────────────────────────────────────────
@@ -108,6 +160,17 @@ class MySubmissionsView(APIView):
             sub.review_note = ''
             sub.source = 'portal'
             sub.save()
+
+        if submit:
+            emp = _employee_of(request.user)
+            name = (f"{request.user.first_name} {request.user.last_name}".strip()
+                    or request.user.username)
+            title = 'Skills submitted for approval'
+            msg = (f"{name} submitted their skill matrix for {cycle.cycle_id} "
+                   f"and it is awaiting your approval.")
+            for approver in _approvers_for(emp):
+                if approver and approver.pk != request.user.pk:
+                    _notify_skill(approver, 'SKILLS_SUBMITTED', title, msg, sub, '/skills/approvals')
 
         return Response({'submission': SkillSubmissionSerializer(sub).data})
 
@@ -320,6 +383,84 @@ class StaffSubmissionsView(APIView):
             qs = qs.filter(cycle__cycle_id=cycle)
         qs = qs.order_by('-submitted_at', '-updated_at')
         return Response({'submissions': SkillSubmissionSerializer(qs, many=True).data})
+
+
+class ApprovalsView(APIView):
+    """GET /api/skills/approvals/ — submissions awaiting the current reviewer.
+    Managers see their direct reports; HR/Admin also see employees with no
+    reporting manager (the no-manager fallback)."""
+    permission_classes = [IsSkillsStaff]
+
+    def get(self, request):
+        reviewer_emp = _employee_of(request.user)
+        is_hr = request.user.role in ('HR', 'ADMIN')
+        emp_by_user = {
+            e.user_id: e for e in
+            Employee.objects.exclude(user=None).select_related('department', 'designation')
+        }
+        subs = (SkillSubmission.objects.filter(status='submitted')
+                .select_related('user', 'cycle', 'reviewed_by')
+                .order_by('-submitted_at', '-updated_at'))
+        rows = []
+        for s in subs:
+            emp = emp_by_user.get(s.user_id)
+            is_my_report = bool(emp and reviewer_emp and emp.manager_id == reviewer_emp.pk)
+            is_routed_to_hr = is_hr and (emp is None or not emp.manager_id)
+            if not (is_my_report or is_routed_to_hr):
+                continue
+            data = SkillSubmissionSerializer(s).data
+            data['employee_id'] = emp.employee_id if emp else ''
+            data['department'] = emp.department.name if (emp and emp.department) else ''
+            data['designation'] = emp.designation.name if (emp and emp.designation) else ''
+            rows.append(data)
+        return Response({'approvals': rows})
+
+
+class SubmissionReviewView(APIView):
+    """POST /api/skills/submissions/<pk>/review/ — approve or request an update.
+    Body: {action: 'approve'|'reject', note?}. Reviewer = reporting manager or HR/Admin."""
+    permission_classes = [IsSkillsStaff]
+
+    def post(self, request, pk):
+        try:
+            sub = SkillSubmission.objects.select_related('user', 'cycle').get(pk=pk)
+        except SkillSubmission.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not _can_review(sub, request.user):
+            return Response({'detail': 'You are not the reviewer for this submission.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        action = str(request.data.get('action') or '').lower()
+        note = str(request.data.get('note') or '')[:1000]
+        if action not in ('approve', 'reject'):
+            return Response({'detail': 'action must be "approve" or "reject".'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if action == 'reject' and not note.strip():
+            return Response({'detail': 'Please add a note explaining what to update.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            sub = SkillSubmission.objects.select_for_update().select_related('user', 'cycle').get(pk=pk)
+            if sub.status != 'submitted':
+                return Response({'detail': 'Only submitted skills can be reviewed.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            sub.status = 'approved' if action == 'approve' else 'rejected'
+            sub.reviewed_by = request.user
+            sub.reviewed_at = timezone.now()
+            sub.review_note = note
+            sub.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_note', 'updated_at'])
+
+        reviewer = (f"{request.user.first_name} {request.user.last_name}".strip()
+                    or request.user.username)
+        if action == 'approve':
+            _notify_skill(sub.user, 'SKILLS_APPROVED', 'Skills approved',
+                          f"{reviewer} approved your {sub.cycle.cycle_id} skill matrix.",
+                          sub, '/skills')
+        else:
+            _notify_skill(sub.user, 'SKILLS_CHANGES_REQUESTED', 'Skills need an update',
+                          f"{reviewer} asked you to update your {sub.cycle.cycle_id} skills: {note}",
+                          sub, '/skills')
+        return Response({'submission': SkillSubmissionSerializer(sub).data})
 
 
 class ExportView(APIView):

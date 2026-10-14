@@ -51,6 +51,10 @@ class Notification(models.Model):
         ('DOCUMENT_REVOKED', 'Document Revoked'),
         # Reminders
         ('EXIT_REMINDER', 'Exit Reminder'),
+        # Skills Hub
+        ('SKILLS_SUBMITTED', 'Skills Submitted'),
+        ('SKILLS_APPROVED', 'Skills Approved'),
+        ('SKILLS_CHANGES_REQUESTED', 'Skills Changes Requested'),
     ]
 
     recipient = models.ForeignKey(

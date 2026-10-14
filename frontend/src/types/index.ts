@@ -753,6 +753,12 @@ export interface MySkillsResponse {
   submissions: SkillSubmission[];
 }
 
+export interface SkillApproval extends SkillSubmission {
+  employee_id: string;
+  department: string;
+  designation: string;
+}
+
 export interface SkillsPicker {
   skills: CatalogueSkill[];
   companies: string[];

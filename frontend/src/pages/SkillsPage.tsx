@@ -19,6 +19,8 @@ export default function SkillsPage() {
   const [rows, setRows] = useState<SkillItem[]>([]);
   const [note, setNote] = useState('');
   const [savedStatus, setSavedStatus] = useState<string | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
+  const [reviewedBy, setReviewedBy] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -35,9 +37,17 @@ export default function SkillsPage() {
         const active = me.cycles.find(c => c.is_active);
         const mine = active ? me.submissions.find(s => s.cycle_id === active.cycle_id) : undefined;
         if (mine) {
-          setRows(mine.skills.length ? mine.skills.map(s => ({ ...s })) : [blankRow()]);
-          setNote(mine.employee_note || '');
           setSavedStatus(mine.status);
+          setReviewedBy(mine.reviewed_by_name || null);
+          setReviewNote(mine.status === 'rejected' ? (mine.review_note || '') : '');
+          if (mine.status === 'draft') {
+            // resume editing a saved draft
+            setRows(mine.skills.length ? mine.skills.map(s => ({ ...s })) : [blankRow()]);
+            setNote(mine.employee_note || '');
+          } else {
+            // submitted / approved / needs-update: start from a clean matrix
+            setRows([blankRow()]);
+          }
         } else {
           setRows([blankRow()]);
         }
@@ -68,11 +78,18 @@ export default function SkillsPage() {
     try {
       const { submission } = await skillsService.saveSubmission(clean, submit, note);
       setSavedStatus(submission.status);
-      setRows(submission.skills.length ? submission.skills.map(s => ({ ...s })) : [blankRow()]);
+      if (submit) {
+        // Submitted for approval — clear the form to a fresh matrix.
+        setRows([blankRow()]);
+        setNote('');
+        setReviewNote('');
+      } else {
+        setRows(submission.skills.length ? submission.skills.map(s => ({ ...s })) : [blankRow()]);
+      }
       // refresh cycle states
       const me = await skillsService.me();
       setCycles(me.cycles);
-      setMsg(submit ? 'Your skills were submitted.' : 'Draft saved.');
+      setMsg(submit ? 'Your skills were submitted for your manager’s approval.' : 'Draft saved.');
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { detail?: string } } };
       setError(ax.response?.data?.detail || 'Could not save. Please try again.');
@@ -97,6 +114,22 @@ export default function SkillsPage() {
 
       {msg && <div className="alert" style={{ marginBottom: 16, background: '#ecfdf5', color: '#047857' }}>{msg}</div>}
       {error && <div className="error-message" style={{ marginBottom: 16 }}>{error}</div>}
+
+      {savedStatus === 'submitted' && (
+        <div className="alert" style={{ marginBottom: 16, background: '#eff6ff', color: '#1d4ed8' }}>
+          Your skills are submitted and awaiting your manager’s approval.
+        </div>
+      )}
+      {savedStatus === 'approved' && (
+        <div className="alert" style={{ marginBottom: 16, background: '#ecfdf5', color: '#047857' }}>
+          Your skills for this cycle were approved{reviewedBy ? ` by ${reviewedBy}` : ''} and are recorded.
+        </div>
+      )}
+      {savedStatus === 'rejected' && reviewNote && (
+        <div className="alert" style={{ marginBottom: 16, background: '#fffbeb', color: '#b45309' }}>
+          <b>Update requested{reviewedBy ? ` by ${reviewedBy}` : ''}:</b> {reviewNote} — please update your skills and submit again.
+        </div>
+      )}
 
       {!profileComplete && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -203,7 +236,7 @@ export default function SkillsPage() {
         </div>
 
         <div className="form-actions" style={{ marginTop: 8 }}>
-          <button className="btn btn-secondary" onClick={() => save(false)} disabled={busy || !profileComplete}>
+          <button className="btn btn-secondary" onClick={() => save(false)} disabled={busy || !profileComplete || savedStatus === 'approved'}>
             {busy ? 'Saving…' : 'Save Draft'}
           </button>
           <button className="btn btn-primary" onClick={() => save(true)} disabled={busy || !profileComplete || !editable}>

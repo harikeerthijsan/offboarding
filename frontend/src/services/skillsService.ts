@@ -1,7 +1,7 @@
 import api, { apiBaseUrl } from './api';
 import type {
   MySkillsResponse, SkillsPicker, SkillItem, SkillSubmission,
-  CatalogueSkill, CycleRow, SkillsTeamRow,
+  CatalogueSkill, CycleRow, SkillsTeamRow, SkillApproval,
 } from '../types';
 
 export interface CyclePayload {
@@ -87,6 +87,18 @@ export const skillsService = {
   // Team (staff)
   team: async (): Promise<{ team: SkillsTeamRow[] }> => {
     const { data } = await api.get('/skills/team/');
+    return data;
+  },
+
+  // Approvals (reporting manager / HR / admin)
+  approvals: async (): Promise<{ approvals: SkillApproval[] }> => {
+    const { data } = await api.get('/skills/approvals/');
+    return data;
+  },
+  reviewSubmission: async (
+    id: number, action: 'approve' | 'reject', note = '',
+  ): Promise<{ submission: SkillSubmission }> => {
+    const { data } = await api.post(`/skills/submissions/${id}/review/`, { action, note });
     return data;
   },
 };

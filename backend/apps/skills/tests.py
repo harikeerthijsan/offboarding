@@ -83,6 +83,80 @@ class SubmissionTest(SkillsSetup):
         self.assertEqual(active['state'], 'submitted')
 
 
+class ApprovalFlowTest(SkillsSetup):
+    def setUp(self):
+        super().setUp()
+        from apps.notifications.models import Notification
+        self.Notification = Notification
+        self.mgr_user = User.objects.create_user(email='m@test.com', username='m', password='p', role='MANAGER')
+        self.mgr_emp = Employee.objects.create(
+            employee_id='JSAN800', user=self.mgr_user, first_name='Man', last_name='Ager',
+            email='m@test.com', department=self.dept, designation=self.desig, joining_date='2023-01-01',
+        )
+        self.employee.manager = self.mgr_emp
+        self.employee.save(update_fields=['manager'])
+
+    def _submit(self):
+        auth(self.client, self.emp_user)
+        return self.client.post('/api/skills/submissions/',
+                                {'submit': True, 'skills': [{'name': 'Python', 'proficiency': 'Advanced'}]},
+                                format='json')
+
+    def test_submit_notifies_reporting_manager(self):
+        self._submit()
+        self.assertTrue(self.Notification.objects.filter(
+            recipient=self.mgr_user, notification_type='SKILLS_SUBMITTED').exists())
+
+    def test_no_manager_routes_to_hr(self):
+        # JSAN900 employee has no manager initially on the bare_user's side; use emp with manager removed.
+        self.employee.manager = None
+        self.employee.save(update_fields=['manager'])
+        self._submit()
+        self.assertTrue(self.Notification.objects.filter(
+            recipient=self.hr, notification_type='SKILLS_SUBMITTED').exists())
+
+    def test_manager_sees_and_approves(self):
+        self._submit()
+        sub = SkillSubmission.objects.get(user=self.emp_user)
+        auth(self.client, self.mgr_user)
+        appr = self.client.get('/api/skills/approvals/')
+        self.assertEqual(appr.status_code, status.HTTP_200_OK)
+        self.assertIn(sub.pk, [a['id'] for a in appr.data['approvals']])
+        r = self.client.post(f'/api/skills/submissions/{sub.pk}/review/',
+                             {'action': 'approve'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'approved')
+        self.assertEqual(sub.reviewed_by, self.mgr_user)
+        self.assertTrue(self.Notification.objects.filter(
+            recipient=self.emp_user, notification_type='SKILLS_APPROVED').exists())
+
+    def test_reject_requires_note_and_sets_needs_update(self):
+        self._submit()
+        sub = SkillSubmission.objects.get(user=self.emp_user)
+        auth(self.client, self.mgr_user)
+        no_note = self.client.post(f'/api/skills/submissions/{sub.pk}/review/',
+                                   {'action': 'reject'}, format='json')
+        self.assertEqual(no_note.status_code, status.HTTP_400_BAD_REQUEST)
+        ok = self.client.post(f'/api/skills/submissions/{sub.pk}/review/',
+                              {'action': 'reject', 'note': 'Add your tools'}, format='json')
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'rejected')
+        self.assertTrue(self.Notification.objects.filter(
+            recipient=self.emp_user, notification_type='SKILLS_CHANGES_REQUESTED').exists())
+
+    def test_unrelated_manager_cannot_review(self):
+        self._submit()
+        sub = SkillSubmission.objects.get(user=self.emp_user)
+        other = User.objects.create_user(email='o@test.com', username='o', password='p', role='MANAGER')
+        Employee.objects.create(employee_id='JSAN801', user=other, first_name='Oth', last_name='Er',
+                                email='o@test.com', department=self.dept, designation=self.desig, joining_date='2023-01-01')
+        auth(self.client, other)
+        r = self.client.post(f'/api/skills/submissions/{sub.pk}/review/', {'action': 'approve'}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class CatalogueAndStaffTest(SkillsSetup):
     def test_employee_sees_active_only(self):
         SkillDefinition.objects.create(name='Archived', active=False)
