@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { skillsService } from '../services/skillsService';
-import type { CycleRow, SkillItem, SkillsPicker } from '../types';
+import type { CycleRow, SkillItem, SkillsPicker, SkillSubmission } from '../types';
 import { SKILL_CATEGORIES, PROFICIENCY, SKILL_STATUSES, stateBadgeClass, stateLabel, formatDate } from '../utils/skills';
 import Icon from '../components/Icon';
 import '../styles/skills-form.css';
@@ -18,6 +18,8 @@ export default function SkillsPage() {
   const [picker, setPicker] = useState<SkillsPicker>({ skills: [], companies: [], roles: [] });
   const [rows, setRows] = useState<SkillItem[]>([]);
   const [note, setNote] = useState('');
+  const [submission, setSubmission] = useState<SkillSubmission | null>(null);
+  const [editing, setEditing] = useState(true);
   const [savedStatus, setSavedStatus] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewedBy, setReviewedBy] = useState<string | null>(null);
@@ -36,19 +38,24 @@ export default function SkillsPage() {
         setPicker(pk);
         const active = me.cycles.find(c => c.is_active);
         const mine = active ? me.submissions.find(s => s.cycle_id === active.cycle_id) : undefined;
+        setSubmission(mine || null);
         if (mine) {
           setSavedStatus(mine.status);
           setReviewedBy(mine.reviewed_by_name || null);
           setReviewNote(mine.status === 'rejected' ? (mine.review_note || '') : '');
-          if (mine.status === 'draft') {
-            // resume editing a saved draft
+          if (mine.status === 'draft' || mine.status === 'rejected') {
+            // resume editing a saved draft, or revise after an update request —
+            // pre-fill the matrix so they can see and amend what they entered.
+            setEditing(true);
             setRows(mine.skills.length ? mine.skills.map(s => ({ ...s })) : [blankRow()]);
             setNote(mine.employee_note || '');
           } else {
-            // submitted / approved / needs-update: start from a clean matrix
+            // submitted / approved: show a read-only snapshot of what was submitted.
+            setEditing(false);
             setRows([blankRow()]);
           }
         } else {
+          setEditing(true);
           setRows([blankRow()]);
         }
       } catch {
@@ -76,15 +83,17 @@ export default function SkillsPage() {
     if (submit && clean.length === 0) { setError('Add at least one skill before submitting.'); return; }
     setBusy(true);
     try {
-      const { submission } = await skillsService.saveSubmission(clean, submit, note);
-      setSavedStatus(submission.status);
+      const { submission: saved } = await skillsService.saveSubmission(clean, submit, note);
+      setSubmission(saved);
+      setSavedStatus(saved.status);
       if (submit) {
-        // Submitted for approval — clear the form to a fresh matrix.
-        setRows([blankRow()]);
-        setNote('');
+        // Submitted for approval — switch to the read-only snapshot so the
+        // employee can see exactly what they submitted.
+        setEditing(false);
         setReviewNote('');
       } else {
-        setRows(submission.skills.length ? submission.skills.map(s => ({ ...s })) : [blankRow()]);
+        // Draft saved — keep editing, reflecting what was stored.
+        setRows(saved.skills.length ? saved.skills.map(s => ({ ...s })) : [blankRow()]);
       }
       // refresh cycle states
       const me = await skillsService.me();
@@ -96,6 +105,14 @@ export default function SkillsPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function editSubmission() {
+    if (!submission) return;
+    setRows(submission.skills.length ? submission.skills.map(s => ({ ...s })) : [blankRow()]);
+    setNote(submission.employee_note || '');
+    setMsg(''); setError('');
+    setEditing(true);
   }
 
   if (loading) return <div className="loading-state"><div className="spinner" /><p>Loading…</p></div>;
@@ -156,7 +173,53 @@ export default function SkillsPage() {
         )}
       </div>
 
-      {/* Skill rows */}
+      {/* Read-only snapshot of what was submitted (submitted / approved) */}
+      {!editing && submission && (
+        <div className="card">
+          <div className="card-h-flex">
+            <h3>Your Submitted Skills</h3>
+            <span className="muted">
+              {submission.submitted_at ? `Submitted ${formatDate(submission.submitted_at)}` : ''}
+            </span>
+          </div>
+          <div className="skills-editor">
+            <table className="kt-table skills-table">
+              <thead>
+                <tr>
+                  <th>Skill</th><th>Category</th><th>Status</th><th>Level</th><th>Years</th>
+                  <th>Company</th><th>Role</th><th>Customer / Project</th><th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {submission.skills.map((s, i) => (
+                  <tr key={i}>
+                    <td data-label="Skill"><b>{s.name}</b></td>
+                    <td data-label="Category">{s.category}</td>
+                    <td data-label="Status">{SKILL_STATUSES.find(x => x.value === s.status)?.label || s.status}</td>
+                    <td data-label="Level">{s.proficiency}</td>
+                    <td data-label="Years">{s.years ?? '—'}</td>
+                    <td data-label="Company">{s.company || '—'}</td>
+                    <td data-label="Role">{s.role || '—'}</td>
+                    <td data-label="Customer / Project">{s.customer || '—'}</td>
+                    <td data-label="Note">{s.note || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {submission.employee_note && (
+            <p className="muted" style={{ marginTop: 12 }}><b>Your note:</b> {submission.employee_note}</p>
+          )}
+          {submission.status === 'submitted' && (
+            <div className="form-actions" style={{ marginTop: 12 }}>
+              <button className="btn btn-secondary" onClick={editSubmission} disabled={!editable}>Edit &amp; resubmit</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Skill rows (editable) */}
+      {editing && (
       <div className="card">
         <div className="card-h-flex">
           <h3>Skill Matrix</h3>
@@ -244,6 +307,7 @@ export default function SkillsPage() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Review timeline */}
       {cycles.length > 0 && (
