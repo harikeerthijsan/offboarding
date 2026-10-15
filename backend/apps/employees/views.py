@@ -1,4 +1,6 @@
 import csv
+import re
+from datetime import date
 
 from django.db.models import Q
 from django.http import HttpResponse
@@ -282,6 +284,43 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 'Completed' if off.clearance_completed_at else 'Pending',
             ]
 
+        def tenure_end_date(employee):
+            """Last day counted toward JSAN tenure: the exit date if the
+            employee has left, otherwise today."""
+            off = latest_offboarding.get(employee.id)
+            if off:
+                np = getattr(off, 'notice_period', None)
+                dd = (getattr(np, 'actual_last_working_day', None)
+                      or getattr(np, 'expected_last_working_day', None)
+                      or off.last_working_date)
+                if dd:
+                    return dd
+            return date.today()
+
+        def jsan_years(employee):
+            """Years of service at JSAN (joining date -> exit/today), 1 decimal."""
+            if not employee.joining_date:
+                return None
+            days = (tenure_end_date(employee) - employee.joining_date).days
+            return round(max(days, 0) / 365.25, 1)
+
+        def previous_years(employee):
+            """Sum of the 'years' values across the profile's previous
+            experience entries (handles '2.5', '3 yrs', etc.)."""
+            total = 0.0
+            for item in (employee.previous_experience or []):
+                raw = str((item or {}).get('years') or '').strip()
+                if not raw:
+                    continue
+                m = re.match(r'\s*([0-9]+(?:\.[0-9]+)?)', raw)
+                if m:
+                    total += float(m.group(1))
+            return round(total, 1)
+
+        def total_experience(employee):
+            """JSAN tenure + previous experience declared on the profile."""
+            return round((jsan_years(employee) or 0.0) + previous_years(employee), 1)
+
         headers = ['Employee ID', 'Name', 'Email', 'Phone', 'Date of Birth', 'Gender',
                    'Blood Group', 'Department', 'Designation', 'Manager',
                    'Employment Type', 'Status', 'Location',
@@ -291,7 +330,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if include_sensitive:
             headers += ['Aadhaar Number', 'PAN Number', 'UAN Number', 'ESI Number',
                         'Bank Name', 'Bank Account Holder', 'Bank Account Number', 'Bank IFSC']
-        headers += ['Joining Date', 'Skills']
+        headers += ['Joining Date', 'Experience in JSAN (years)',
+                    'Total Experience (years)', 'Skills']
         if not active_only:
             headers += ['Exit Date', 'Exit Interview', 'Knowledge Transfer',
                         'IT Clearance', 'Finance Clearance', 'HR Clearance',
@@ -331,7 +371,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                     d(e.bank_name), d(e.bank_account_holder_name),
                     d(e.bank_account_number), d(e.bank_ifsc_code),
                 ]
-            row += [d(e.joining_date.isoformat() if e.joining_date else ''), skills_cell(e)]
+            jy = jsan_years(e)
+            row += [
+                d(e.joining_date.isoformat() if e.joining_date else ''),
+                d(jy if jy is not None else ''),
+                d(total_experience(e)),
+                skills_cell(e),
+            ]
             if not active_only:
                 row += offboarding_cells(e)
             writer.writerow(row)
