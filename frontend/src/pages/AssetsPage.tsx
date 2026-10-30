@@ -16,7 +16,8 @@ const emptyForm = {
 export default function AssetsPage() {
   const { user } = useAuthContext();
   const canManage = user?.role === 'IT' || user?.role === 'ADMIN';
-  const isPrivileged = ['IT', 'ADMIN', 'HR', 'FINANCE', 'MANAGER'].includes(user?.role ?? '');
+  // Only IT and Admin see the full catalogue; everyone else sees only their own assets.
+  const isPrivileged = canManage;
 
   const [assets, setAssets] = useState<Asset[]>([]);
   const [employees, setEmployees] = useState<EmployeeListItem[]>([]);

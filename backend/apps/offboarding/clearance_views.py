@@ -100,10 +100,10 @@ class AssetListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Employees may only see their own assets here; privileged roles see all.
+        # Only IT and Admin see every asset; everyone else sees only their own.
         role = request.user.role
         qs = Asset.objects.select_related('assigned_to').all()
-        if role not in ('IT', 'ADMIN', 'HR', 'FINANCE', 'MANAGER'):
+        if role not in ('IT', 'ADMIN'):
             emp = _employee_for(request.user)
             qs = qs.filter(assigned_to=emp) if emp else Asset.objects.none()
 
@@ -146,8 +146,8 @@ class AssetDetailView(APIView):
             asset = Asset.objects.select_related('assigned_to').get(pk=pk)
         except Asset.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        # Employee may only view own asset
-        if request.user.role not in ('IT', 'ADMIN', 'HR', 'FINANCE', 'MANAGER'):
+        # Only IT and Admin may view any asset; everyone else only their own.
+        if request.user.role not in ('IT', 'ADMIN'):
             emp = _employee_for(request.user)
             if not emp or asset.assigned_to_id != emp.pk:
                 return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
@@ -271,7 +271,7 @@ class EmployeeAssetsView(APIView):
         except Employee.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         role = request.user.role
-        if role not in ('IT', 'ADMIN', 'HR', 'FINANCE', 'MANAGER') and emp.user_id != request.user.pk:
+        if role not in ('IT', 'ADMIN') and emp.user_id != request.user.pk:
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         assets = Asset.objects.filter(assigned_to=emp)
         return Response(AssetSerializer(assets, many=True).data)
